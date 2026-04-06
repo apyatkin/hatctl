@@ -286,7 +286,9 @@ def secret_set(ref: str, file_path: str | None):
     if file_path:
         value = open(file_path).read()
     else:
-        value = click.prompt("Enter secret value", hide_input=True)
+        click.echo("Enter secret value (paste multiline, then Ctrl-D when done):")
+        import sys
+        value = sys.stdin.read()
 
     if backend == "keychain":
         encoded = base64.b64encode(value.encode()).decode()
