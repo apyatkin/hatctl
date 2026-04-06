@@ -1,0 +1,77 @@
+from __future__ import annotations
+
+import os
+import tempfile
+from pathlib import Path
+
+from hat.config import load_company_config
+from hat.secrets import SecretResolver
+
+
+def build_company_env(company: str) -> dict[str, str]:
+    """Build env vars for a company without activating modules or modifying state."""
+    config = load_company_config(company)
+    resolver = SecretResolver()
+    secrets = resolver.resolve_refs(config)
+
+    env_vars: dict[str, str] = {}
+
+    # Git identity
+    identity = config.get("git", {}).get("identity", {})
+    if identity.get("name"):
+        env_vars["GIT_AUTHOR_NAME"] = identity["name"]
+        env_vars["GIT_COMMITTER_NAME"] = identity["name"]
+    if identity.get("email"):
+        env_vars["GIT_AUTHOR_EMAIL"] = identity["email"]
+        env_vars["GIT_COMMITTER_EMAIL"] = identity["email"]
+
+    # Cloud providers
+    cloud = config.get("cloud", {})
+    if "aws" in cloud:
+        env_vars["AWS_PROFILE"] = cloud["aws"]["profile"]
+    if "kubernetes" in cloud:
+        kubeconfig = cloud["kubernetes"].get("kubeconfig", "")
+        if kubeconfig:
+            env_vars["KUBECONFIG"] = str(Path(kubeconfig).expanduser())
+    if "nomad" in cloud:
+        env_vars["NOMAD_ADDR"] = cloud["nomad"]["addr"]
+        token_ref = cloud["nomad"].get("token_ref")
+        if token_ref and token_ref in secrets:
+            env_vars["NOMAD_TOKEN"] = secrets[token_ref]
+        cacert = cloud["nomad"].get("cacert")
+        if cacert:
+            env_vars["NOMAD_CACERT"] = str(Path(cacert).expanduser())
+    if "vault" in cloud:
+        env_vars["VAULT_ADDR"] = cloud["vault"]["addr"]
+        token_ref = cloud["vault"].get("token_ref")
+        if token_ref and token_ref in secrets:
+            env_vars["VAULT_TOKEN"] = secrets[token_ref]
+    if "consul" in cloud:
+        env_vars["CONSUL_HTTP_ADDR"] = cloud["consul"]["addr"]
+        token_ref = cloud["consul"].get("token_ref")
+        if token_ref and token_ref in secrets:
+            env_vars["CONSUL_HTTP_TOKEN"] = secrets[token_ref]
+    if "hetzner" in cloud:
+        token_ref = cloud["hetzner"].get("token_ref")
+        if token_ref and token_ref in secrets:
+            env_vars["HCLOUD_TOKEN"] = secrets[token_ref]
+    if "terraform" in cloud:
+        for k, v in cloud["terraform"].get("vars", {}).items():
+            env_vars[f"TF_VAR_{k}"] = v
+
+    # Custom env vars
+    env_vars.update(config.get("env", {}))
+
+    # Proxy
+    proxy = config.get("proxy", {})
+    if "http" in proxy:
+        env_vars["HTTP_PROXY"] = proxy["http"]
+        env_vars["http_proxy"] = proxy["http"]
+    if "https" in proxy:
+        env_vars["HTTPS_PROXY"] = proxy["https"]
+        env_vars["https_proxy"] = proxy["https"]
+    if "no_proxy" in proxy:
+        env_vars["NO_PROXY"] = proxy["no_proxy"]
+        env_vars["no_proxy"] = proxy["no_proxy"]
+
+    return env_vars
