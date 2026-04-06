@@ -424,6 +424,63 @@ def completion_cmd(shell: str):
         click.echo(f"Unsupported shell: {shell}")
 
 
+@main.command()
+def setup():
+    """First-time setup — configure shell, Touch ID, directories.
+
+    \b
+    Run this once after installing hat. It will:
+      1. Create ~/projects/ directory
+      2. Enable Touch ID for sudo (optional)
+      3. Generate shell aliases and completions
+      4. Show next steps
+    """
+    from pathlib import Path
+    import subprocess
+
+    click.echo("hat setup\n")
+
+    # 1. Create projects dir
+    projects = Path.home() / "projects"
+    projects.mkdir(exist_ok=True)
+    (projects / "common").mkdir(exist_ok=True)
+    click.echo(f"  [OK] {projects}/")
+
+    # 2. Touch ID for sudo
+    pam_file = Path("/etc/pam.d/sudo_local")
+    if pam_file.exists() and "pam_tid.so" in pam_file.read_text():
+        click.echo("  [OK] Touch ID for sudo (already enabled)")
+    else:
+        if click.confirm("\n  Enable Touch ID for sudo? (uses fingerprint instead of password)", default=True):
+            result = subprocess.run(
+                ["sudo", "sh", "-c", 'echo "auth       sufficient     pam_tid.so" > /etc/pam.d/sudo_local'],
+                capture_output=False,
+            )
+            if result.returncode == 0:
+                click.echo("  [OK] Touch ID for sudo enabled")
+            else:
+                click.echo("  [SKIP] Could not enable Touch ID")
+        else:
+            click.echo("  [SKIP] Touch ID for sudo")
+
+    # 3. Generate aliases and completions
+    from hat.common import generate_aliases, generate_completions
+    generate_aliases()
+    click.echo("  [OK] ~/projects/common/aliases.sh")
+    generate_completions()
+    click.echo("  [OK] ~/projects/common/completions.sh")
+
+    # 4. Shell integration check
+    click.echo("\n  Add to ~/.zshrc (if not already there):")
+    click.echo('    eval "$(hat shell-init zsh)"')
+    click.echo('    eval "$(_HAT_COMPLETE=zsh_source hat)"')
+
+    click.echo("\n  Next steps:")
+    click.echo("    hat init <company>       create your first company")
+    click.echo("    hat tools init           set up common tools")
+    click.echo("    hat skills deploy        deploy Claude Code skills")
+
+
 from hat.cli_repos import repos
 from hat.cli_secret import secret_group
 from hat.cli_config import config_group

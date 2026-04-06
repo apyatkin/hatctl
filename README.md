@@ -23,6 +23,27 @@ This installs `hat` to `~/.local/bin/`. Make sure it's in your PATH:
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
+## Setup
+
+Run once after installing:
+
+```bash
+hat setup
+```
+
+This will:
+1. Create `~/projects/` directory structure
+2. Enable **Touch ID for sudo** (optional — uses fingerprint instead of password for VPN, DNS, etc.)
+3. Generate shell aliases and completions
+4. Show next steps
+
+Then add to `~/.zshrc`:
+
+```bash
+eval "$(hat shell-init zsh)"
+eval "$(_HAT_COMPLETE=zsh_source hat)"
+```
+
 ## Update
 
 ```bash
@@ -37,16 +58,6 @@ uv tool install git+https://github.com/apyatkin/personal-tools.git --force
 ```bash
 uv tool uninstall hatctl
 ```
-
-## Shell Integration
-
-Add to `~/.zshrc`:
-
-```bash
-eval "$(hat shell-init zsh)"
-```
-
-This sources env vars, aliases, and completions on every prompt and adds a `[company]` indicator.
 
 ## Quick Start
 
@@ -307,6 +318,8 @@ hat net check host.com -p 8080   # check specific ports
 ## All Commands
 
 ```
+hat setup                                 first-time setup (Touch ID, dirs, aliases)
+
 hat on <company>                          put on a company hat
 hat off                                   take off your hat
 hat status                                what hat am I wearing?
@@ -321,6 +334,11 @@ hat config validate <company>             validate config
 hat template <company> --from <other>     clone company config
 
 hat ssh <company> <host> [-u USER]        SSH via jump host (named or raw)
+hat vpn config <company>                  show/set VPN config
+hat vpn up <company>                      connect VPN
+hat vpn down <company>                    disconnect VPN
+hat vpn status [company]                  check VPN status
+
 hat tunnel start <company>                start SSH tunnels
 hat tunnel stop                           stop tunnels
 
