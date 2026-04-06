@@ -297,6 +297,24 @@ def migrate():
         click.echo(action)
 
 
+@main.command("diff")
+@click.argument("company1", shell_complete=_complete_company)
+@click.argument("company2", shell_complete=_complete_company)
+def diff_cmd(company1: str, company2: str):
+    """Compare two company configs."""
+    import difflib
+    config1 = load_company_config(company1)
+    config2 = load_company_config(company2)
+    yaml1 = yaml.dump(config1, default_flow_style=False, sort_keys=True).splitlines(keepends=True)
+    yaml2 = yaml.dump(config2, default_flow_style=False, sort_keys=True).splitlines(keepends=True)
+    diff = difflib.unified_diff(yaml1, yaml2, fromfile=company1, tofile=company2)
+    output = "".join(diff)
+    if not output:
+        click.echo("Configs are identical.")
+    else:
+        click.echo(output)
+
+
 @main.group("tunnel")
 def tunnel_group():
     """Manage SSH tunnels and SOCKS proxies."""
