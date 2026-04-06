@@ -305,6 +305,36 @@ def tools_check(company: str):
     mod.activate(tools_config, secrets={})
 
 
+# --- Aliases command ---
+
+@main.group()
+def aliases():
+    """Manage shell aliases."""
+
+
+@aliases.command("generate")
+def aliases_generate():
+    """Generate ~/projects/common/aliases.sh."""
+    from ctx.common import generate_aliases
+    path = generate_aliases()
+    click.echo(f"Generated {path}")
+
+
+# --- Completions command ---
+
+@main.group()
+def completions():
+    """Manage shell completions."""
+
+
+@completions.command("generate")
+def completions_generate():
+    """Generate ~/projects/common/completions.sh."""
+    from ctx.common import generate_completions
+    path = generate_completions()
+    click.echo(f"Generated {path}")
+
+
 # --- Skills command ---
 
 @main.group()

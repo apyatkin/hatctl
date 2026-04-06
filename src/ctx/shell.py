@@ -7,13 +7,18 @@ def generate_shell_init(shell: str) -> str:
 
     return """\
 # ctx shell integration
+
+# Common aliases and completions
+[[ -f ~/projects/common/aliases.sh ]] && source ~/projects/common/aliases.sh
+[[ -f ~/projects/common/completions.sh ]] && source ~/projects/common/completions.sh
+
+# ctx env and prompt
 _ctx_precmd() {
-  local env_file="${CTX_CONFIG_DIR:-$HOME/.config/ctx}/state.env"
+  local env_file="${CTX_CONFIG_DIR:-$HOME/Library/ctx}/state.env"
   if [[ -f "$env_file" ]]; then
     source "$env_file"
   fi
-  # Read active company for prompt
-  local state_file="${CTX_CONFIG_DIR:-$HOME/.config/ctx}/state.json"
+  local state_file="${CTX_CONFIG_DIR:-$HOME/Library/ctx}/state.json"
   if [[ -f "$state_file" ]]; then
     export CTX_ACTIVE=$(python3 -c "import json,sys;d=json.load(open('$state_file'));print(d.get('active_company',''))" 2>/dev/null)
   else
