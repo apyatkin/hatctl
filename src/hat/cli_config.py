@@ -1,0 +1,98 @@
+from __future__ import annotations
+
+import click
+
+from hat.config import load_company_config, save_company_config, set_nested
+
+
+@click.group("config")
+def config_group():
+    """Modify company configs without editing YAML."""
+
+
+@config_group.command("set")
+@click.argument("company")
+@click.argument("path")
+@click.argument("value")
+def config_set(company: str, path: str, value: str):
+    """Set a config value. Use dotted paths (e.g. cloud.nomad.addr)."""
+    config = load_company_config(company)
+    set_nested(config, path, value)
+    save_company_config(company, config)
+    click.echo(f"{company}: {path} = {value}")
+
+
+@config_group.command("add-ssh")
+@click.argument("company")
+@click.argument("keychain_name")
+@click.option("--file", "-f", "file_path", type=click.Path(exists=True), help="Read key from file")
+def config_add_ssh(company: str, keychain_name: str, file_path: str | None):
+    """Store SSH key in Keychain and add ref to company config.
+
+    Examples:
+
+      hat config add-ssh acme acme-sshkey -f ~/.ssh/acme_ed25519
+
+      hat config add-ssh acme acme-sshkey
+      (paste key, Ctrl-D)
+    """
+    import base64
+    import subprocess
+
+    if file_path:
+        value = open(file_path).read()
+    else:
+        click.echo("Paste SSH private key (Ctrl-D when done):")
+        import sys
+        value = sys.stdin.read()
+
+    encoded = base64.b64encode(value.encode()).decode()
+    subprocess.run(
+        ["security", "add-generic-password", "-s", keychain_name, "-a", keychain_name,
+         "-w", encoded, "-U"],
+        check=True,
+    )
+
+    config = load_company_config(company)
+    set_nested(config, "ssh.keys[+]", f"keychain:{keychain_name}")
+    save_company_config(company, config)
+    click.echo(f"Stored in keychain: {keychain_name}")
+    click.echo(f"{company}: added keychain:{keychain_name} to ssh.keys")
+
+
+@config_group.command("add-secret")
+@click.argument("company")
+@click.argument("config_path")
+@click.argument("keychain_name")
+@click.option("--file", "-f", "file_path", type=click.Path(exists=True), help="Read value from file")
+def config_add_secret(company: str, config_path: str, keychain_name: str, file_path: str | None):
+    """Store secret in keychain and add ref to company config.
+
+    Examples:
+
+      hat config add-secret acme cloud.nomad.token_ref acme-nomad-token
+
+      hat config add-secret acme git.identity.ssh_key acme-sshkey -f ~/.ssh/key
+    """
+    import base64
+    import subprocess
+
+    if file_path:
+        value = open(file_path).read()
+    else:
+        click.echo("Enter secret value (paste multiline, then Ctrl-D when done):")
+        import sys
+        value = sys.stdin.read()
+
+    encoded = base64.b64encode(value.encode()).decode()
+    subprocess.run(
+        ["security", "add-generic-password", "-s", keychain_name, "-a", keychain_name,
+         "-w", encoded, "-U"],
+        check=True,
+    )
+
+    config = load_company_config(company)
+    set_nested(config, config_path, f"keychain:{keychain_name}")
+    save_company_config(company, config)
+    click.echo(f"Stored in keychain: {keychain_name}")
+    click.echo(f"{company}: {config_path} = keychain:{keychain_name}")
