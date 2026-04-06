@@ -96,3 +96,18 @@ def config_add_secret(company: str, config_path: str, keychain_name: str, file_p
     save_company_config(company, config)
     click.echo(f"Stored in keychain: {keychain_name}")
     click.echo(f"{company}: {config_path} = keychain:{keychain_name}")
+
+
+@config_group.command("validate")
+@click.argument("company")
+def config_validate(company: str):
+    """Validate a company config."""
+    from hat.validate import validate_config
+    config = load_company_config(company)
+    errors = validate_config(config)
+    if not errors:
+        click.echo("Config is valid.")
+        return
+    for e in errors:
+        icon = click.style("ERR", fg="red") if e.level == "error" else click.style("WARN", fg="yellow")
+        click.echo(f"  [{icon}] {e.path}: {e.message}")

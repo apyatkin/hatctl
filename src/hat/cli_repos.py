@@ -4,7 +4,7 @@ import click
 
 from hat.config import load_company_config, list_companies
 from hat.secrets import SecretResolver
-from hat.repos import clone_repos, pull_repos, get_repos_dir, list_remote_repos
+from hat.repos import clone_repos, pull_repos, sync_repos, get_repos_dir, list_remote_repos
 
 
 @click.group()
@@ -67,6 +67,33 @@ def repos_pull(company: str | None, pull_all: bool):
             click.echo(f"  SKIP: {s['path']} — {s['reason']}")
         for f in failed:
             click.echo(f"  FAIL: {f['path']} — {f['reason']}")
+
+
+@repos.command("sync")
+@click.argument("company")
+@click.option("--concurrency", "-j", default=4, help="Parallel workers")
+def repos_sync(company: str, concurrency: int):
+    """Clone new repos and pull updates for existing ones."""
+    config = load_company_config(company)
+    sources = config.get("git", {}).get("sources", [])
+    if not sources:
+        click.echo("No git sources configured.")
+        return
+
+    resolver = SecretResolver()
+    secrets = resolver.resolve_refs(config)
+    identity = config.get("git", {}).get("identity")
+
+    click.echo(f"Syncing repos for {company}...")
+    results = sync_repos(company, sources, secrets, identity, concurrency)
+
+    cloned = [r for r in results["clone"] if r["status"] == "cloned"]
+    pulled = [r for r in results["pull"] if r["status"] == "updated"]
+    failed = [r for r in results["clone"] + results["pull"] if r["status"] == "failed"]
+
+    click.echo(f"Done: {len(cloned)} cloned, {len(pulled)} pulled, {len(failed)} failed")
+    for f in failed:
+        click.echo(f"  FAIL: {f['path']} — {f.get('reason', 'unknown')}")
 
 
 @repos.command("list")

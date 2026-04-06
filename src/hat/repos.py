@@ -146,6 +146,19 @@ def clone_repos(
     return results
 
 
+def sync_repos(
+    company: str,
+    sources: list[dict],
+    secrets: dict,
+    git_identity: dict | None = None,
+    concurrency: int = 4,
+) -> dict[str, list[dict]]:
+    clone_results = clone_repos(company, sources, secrets, git_identity, concurrency)
+    repos_dir = get_repos_dir(company)
+    pull_results = pull_repos(repos_dir, concurrency)
+    return {"clone": clone_results, "pull": pull_results}
+
+
 def pull_repos(repos_dir: Path, concurrency: int = 4) -> list[dict]:
     if not repos_dir.exists():
         return []
