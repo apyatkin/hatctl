@@ -22,16 +22,7 @@ class GitModule(Module):
             "GIT_COMMITTER_NAME": identity["name"],
             "GIT_COMMITTER_EMAIL": identity["email"],
         }
-        sm = StateManager()
-        existing = {}
-        env_file = sm._env_file
-        if env_file.exists():
-            for line in env_file.read_text().splitlines():
-                if line.startswith("export "):
-                    key, _, val = line[7:].partition("=")
-                    existing[key] = val.strip('"')
-        existing.update(env_vars)
-        sm.write_env(existing)
+        StateManager().merge_env(env_vars)
 
     def deactivate(self) -> None:
         self._identity = None

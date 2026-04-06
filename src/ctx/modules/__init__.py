@@ -26,7 +26,6 @@ class Module(ABC):
 
 class Orchestrator:
     def __init__(self, modules: list[Module]):
-        self._modules = {m.name: m for m in modules}
         self._sorted = sorted(modules, key=lambda m: m.order)
 
     def activate(

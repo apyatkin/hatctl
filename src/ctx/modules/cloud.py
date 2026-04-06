@@ -98,15 +98,7 @@ class CloudModule(Module):
 
         self._env_vars = env_vars
         if env_vars:
-            sm = StateManager()
-            existing = {}
-            if sm._env_file.exists():
-                for line in sm._env_file.read_text().splitlines():
-                    if line.startswith("export "):
-                        key, _, val = line[7:].partition("=")
-                        existing[key] = val.strip('"')
-            existing.update(env_vars)
-            sm.write_env(existing)
+            StateManager().merge_env(env_vars)
 
     def _refresh_kubeconfig(self, refresh: dict) -> None:
         provider = refresh.get("provider")

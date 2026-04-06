@@ -40,21 +40,10 @@ def _build_orchestrator() -> Orchestrator:
     ])
 
 
-# Map config top-level keys to module names
-CONFIG_KEY_TO_MODULE = {
-    "tools": "tools",
-    "vpn": "vpn",
-    "dns": "dns",
-    "hosts": "hosts",
-    "ssh": "ssh",
-    "git": "git",
-    "cloud": "cloud",
-    "env": "env",
-    "docker": "docker",
-    "proxy": "proxy",
-    "browser": "browser",
-    "apps": "apps",
-}
+MODULE_NAMES = frozenset({
+    "tools", "vpn", "dns", "hosts", "ssh", "git",
+    "cloud", "env", "docker", "proxy", "browser", "apps",
+})
 
 
 @click.group()
@@ -84,11 +73,7 @@ def use(company: str, check_tools: bool):
     resolver = SecretResolver()
     secrets = resolver.resolve_refs(config)
 
-    # Build module config mapping
-    module_config = {}
-    for config_key, module_name in CONFIG_KEY_TO_MODULE.items():
-        if config_key in config:
-            module_config[module_name] = config[config_key]
+    module_config = {k: v for k, v in config.items() if k in MODULE_NAMES}
 
     # Activate
     click.echo(f"Activating {company}...")

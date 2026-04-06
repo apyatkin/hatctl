@@ -15,16 +15,7 @@ class EnvModule(Module):
         if not config:
             return
         self._vars = dict(config)
-        sm = StateManager()
-        existing: dict[str, str] = {}
-        env_file = sm._env_file
-        if env_file.exists():
-            for line in env_file.read_text().splitlines():
-                if line.startswith("export "):
-                    key, _, val = line[7:].partition("=")
-                    existing[key] = val.strip('"')
-        existing.update(self._vars)
-        sm.write_env(existing)
+        StateManager().merge_env(self._vars)
 
     def deactivate(self) -> None:
         self._vars = {}

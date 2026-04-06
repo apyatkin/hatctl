@@ -48,6 +48,21 @@ class StateManager:
         lines = [f'export {k}="{v}"' for k, v in sorted(env_vars.items())]
         self._env_file.write_text("\n".join(lines) + "\n")
 
+    def merge_env(self, env_vars: dict[str, str]):
+        existing = self.read_env()
+        existing.update(env_vars)
+        self.write_env(existing)
+
+    def read_env(self) -> dict[str, str]:
+        if not self._env_file.exists():
+            return {}
+        result = {}
+        for line in self._env_file.read_text().splitlines():
+            if line.startswith("export "):
+                key, _, val = line[7:].partition("=")
+                result[key] = val.strip('"')
+        return result
+
     def clear_env(self):
         if self._env_file.exists():
             self._env_file.unlink()

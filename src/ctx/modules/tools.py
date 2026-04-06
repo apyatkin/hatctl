@@ -11,7 +11,7 @@ import click
 from ctx.config import get_config_dir
 from ctx.modules import Module, ModuleStatus
 
-THROTTLE_SECONDS = 86400  # 24 hours
+THROTTLE_SECONDS = 86400
 
 
 class ToolsModule(Module):
@@ -32,8 +32,14 @@ class ToolsModule(Module):
         state = self._load_state()
         now = time.time()
 
+        brew_outdated: set[str] | None = None
+        tools_to_check = [t for t in brew_tools if shutil.which(t) and self._should_check(t, state, now)]
+        if tools_to_check:
+            result = subprocess.run(["brew", "outdated", "--quiet"], capture_output=True, text=True)
+            brew_outdated = set(result.stdout.split())
+
         for tool in brew_tools:
-            self._ensure_brew(tool, state, now)
+            self._ensure_brew(tool, state, now, brew_outdated)
 
         for tool in pipx_tools:
             self._ensure_pipx(tool, state, now)
@@ -50,17 +56,13 @@ class ToolsModule(Module):
         if parts:
             click.echo(f"Tools: {', '.join(parts)}")
 
-    def _ensure_brew(self, tool: str, state: dict, now: float) -> None:
+    def _ensure_brew(self, tool: str, state: dict, now: float, outdated: set[str] | None = None) -> None:
         if shutil.which(tool) is None:
             subprocess.run(["brew", "install", tool], capture_output=True, text=True)
             self._installed.append(tool)
             state[tool] = now
-        elif self._should_check(tool, state, now):
-            result = subprocess.run(
-                ["brew", "outdated", "--quiet"],
-                capture_output=True, text=True,
-            )
-            if tool in result.stdout.split():
+        elif self._should_check(tool, state, now) and outdated is not None:
+            if tool in outdated:
                 subprocess.run(["brew", "upgrade", tool], capture_output=True, text=True)
                 self._updated.append(tool)
             else:

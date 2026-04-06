@@ -88,7 +88,6 @@ def _list_github(source: dict, secrets: dict) -> list[dict]:
                     "clone_url": repo["ssh_url"],
                 })
 
-            # If fewer items than per_page were returned, this is the last page
             if len(items) < per_page:
                 break
 
@@ -127,7 +126,6 @@ def clone_repos(
         if result.returncode != 0:
             return {"path": str(target), "status": "failed", "reason": result.stderr.strip()}
 
-        # Set git identity
         if git_identity:
             subprocess.run(
                 ["git", "config", "user.name", git_identity["name"]],

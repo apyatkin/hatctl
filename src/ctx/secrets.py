@@ -48,9 +48,7 @@ class SecretResolver:
         backend, path = parse_secret_ref(ref)
         if backend == "keychain":
             return self._resolve_keychain(path)
-        elif backend == "bitwarden":
-            return self._resolve_bitwarden(path)
-        raise ValueError(f"Unknown backend: {backend}")
+        return self._resolve_bitwarden(path)
 
     def _resolve_keychain(self, service: str) -> str:
         result = subprocess.run(
@@ -76,15 +74,9 @@ class SecretResolver:
         else:
             raise ValueError(f"Invalid bitwarden path: {path}")
 
-        if field == "password":
+        if field in ("password", "notes"):
             result = subprocess.run(
-                ["bw", "get", "password", item_name, "--session", self._bw_session],
-                capture_output=True,
-                text=True,
-            )
-        elif field == "notes":
-            result = subprocess.run(
-                ["bw", "get", "notes", item_name, "--session", self._bw_session],
+                ["bw", "get", field, item_name, "--session", self._bw_session],
                 capture_output=True,
                 text=True,
             )
