@@ -10,6 +10,10 @@ def test_generate_aliases(tmp_path):
     assert 'alias ap="ansible-playbook"' in content
     assert 'alias dc="docker compose"' in content
     assert 'alias g="git"' in content
+    assert 'alias kgpa="kubectl get pods -A"' in content
+    assert 'alias ll="ls -la"' in content
+    assert 'alias gcm="git commit -m"' in content
+    assert 'alias topcpu=' in content
 
 
 def test_generate_completions(tmp_path):
