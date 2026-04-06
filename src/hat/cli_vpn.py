@@ -228,12 +228,14 @@ def vpn_status(company: str | None):
 
         connected = False
         if provider == "wireguard":
-            interface = vpn.get("interface", "")
+            import os
+            env = {**os.environ, "PATH": f"/opt/homebrew/bin:/usr/local/bin:{os.environ.get('PATH', '')}"}
+            # Try 'wg show' with no args — lists all active interfaces
             result = subprocess.run(
-                ["sudo", _find_binary("wg"), "show", interface],
-                capture_output=True, text=True,
+                ["sudo", _find_binary("wg"), "show"],
+                capture_output=True, text=True, env=env,
             )
-            connected = result.returncode == 0
+            connected = result.returncode == 0 and len(result.stdout.strip()) > 0
         elif provider == "tailscale":
             result = subprocess.run(
                 [_find_binary("tailscale"), "status"],
