@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import subprocess
+from pathlib import Path
 
 import click
 
@@ -44,7 +45,6 @@ class VPNModule(Module):
             click.echo(f"    (already connected)")
             return
 
-        from pathlib import Path
         if self._config_path:
             p = Path(self._config_path).expanduser()
             if not p.exists():

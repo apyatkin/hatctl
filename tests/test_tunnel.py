@@ -26,7 +26,10 @@ ssh:
 
 
 def test_stop_tunnels():
-    with patch("hat.tunnel.os.kill") as mock_kill:
+    mock_ps = MagicMock()
+    mock_ps.stdout = "ssh\n"
+    with patch("hat.tunnel.os.kill") as mock_kill, \
+         patch("hat.tunnel.subprocess.run", return_value=mock_ps):
         results = stop_tunnels([123, 456])
     assert len(results) == 2
     assert all(r["status"] == "stopped" for r in results)

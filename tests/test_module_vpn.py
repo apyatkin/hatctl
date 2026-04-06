@@ -16,7 +16,9 @@ def test_vpn_wireguard_activate():
     }
     with patch("hat.modules.vpn.subprocess.run") as mock_run, \
          patch("hat.modules.vpn.click.confirm"), \
-         patch("hat.modules.vpn._find_binary", side_effect=_mock_find):
+         patch("hat.modules.vpn.find_binary", side_effect=_mock_find), \
+         patch("hat.modules.vpn.Path") as mock_path:
+        mock_path.return_value.expanduser.return_value.exists.return_value = True
         mock_run.return_value.returncode = 0
         mod.activate(config, secrets={})
     args = mock_run.call_args
@@ -42,7 +44,7 @@ def test_vpn_tailscale_activate():
 
     with patch("hat.modules.vpn.subprocess.run", side_effect=fake_run), \
          patch("hat.modules.vpn.click.confirm"), \
-         patch("hat.modules.vpn._find_binary", side_effect=_mock_find):
+         patch("hat.modules.vpn.find_binary", side_effect=_mock_find):
         mod.activate(config, secrets={})
     assert mod.status().active
 
@@ -56,7 +58,9 @@ def test_vpn_deactivate_wireguard():
     }
     with patch("hat.modules.vpn.subprocess.run") as mock_run, \
          patch("hat.modules.vpn.click.confirm"), \
-         patch("hat.modules.vpn._find_binary", side_effect=_mock_find):
+         patch("hat.modules.vpn.find_binary", side_effect=_mock_find), \
+         patch("hat.modules.vpn.Path") as mock_path:
+        mock_path.return_value.expanduser.return_value.exists.return_value = True
         mock_run.return_value.returncode = 0
         mod.activate(config, secrets={})
         mod.deactivate()
