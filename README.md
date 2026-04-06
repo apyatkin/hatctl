@@ -6,12 +6,21 @@ A CLI tool for switching between multiple company environments. Manages VPN, SSH
 
 ## Install
 
+Requires Python 3.11+ and [uv](https://docs.astral.sh/uv/getting-started/installation/).
+
 ```bash
 # From PyPI
 uv tool install hatctl
 
 # Or from GitHub
 uv tool install git+https://github.com/apyatkin/personal-tools.git
+```
+
+This installs `hat` to `~/.local/bin/`. Make sure it's in your PATH:
+
+```bash
+# Add to ~/.zshrc if not already there
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 ## Update
