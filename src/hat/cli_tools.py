@@ -5,12 +5,105 @@ import click
 
 @click.group("tools")
 def tools_group():
-    """Manage company tools."""
+    """Manage tools — list, add, remove, install.
+
+    \b
+    Tools are installed via three package managers:
+      brew     Homebrew (native CLI tools)
+      pipx     uv tool (Python tools in isolated venvs)
+      npm      npm (Node.js tools)
+
+    \b
+    Tool list stored in ~/projects/common/tools.yaml
+    """
 
 
-@tools_group.command("check")
-def tools_check():
-    """Check and install/update tools from ~/projects/common/tools.yaml."""
+@tools_group.command("list")
+def tools_list():
+    """List all configured tools and their install status."""
+    import shutil
+    from hat.common import load_common_tools
+
+    tools = load_common_tools()
+    if not tools:
+        click.echo("No tools configured. Run 'hat tools init' first.")
+        return
+
+    for method in ["brew", "pipx", "npm"]:
+        items = tools.get(method, [])
+        if not items:
+            continue
+        click.echo(f"\n  {method}:")
+        for tool in sorted(items):
+            from hat.modules.tools import _npm_bin_name
+            bin_name = _npm_bin_name(tool) if method == "npm" else tool
+            installed = shutil.which(bin_name) is not None
+            status = click.style("installed", fg="green") if installed else click.style("missing", fg="red")
+            click.echo(f"    {tool:30s} [{status}]")
+
+
+@tools_group.command("add")
+@click.argument("method", type=click.Choice(["brew", "pipx", "npm"]))
+@click.argument("package")
+def tools_add(method: str, package: str):
+    """Add a tool to the list.
+
+    \b
+    Examples:
+      hat tools add brew wireguard-tools
+      hat tools add brew k9s
+      hat tools add pipx black
+      hat tools add npm @bitwarden/cli
+    """
+    from hat.common import load_common_tools, COMMON_DIR
+    import yaml
+
+    tools = load_common_tools()
+    if not tools:
+        tools = {"brew": [], "pipx": [], "npm": []}
+
+    if method not in tools:
+        tools[method] = []
+
+    if package in tools[method]:
+        click.echo(f"{package} already in {method} list.")
+        return
+
+    tools[method].append(package)
+    tools_file = COMMON_DIR / "tools.yaml"
+    tools_file.write_text(yaml.dump(tools, default_flow_style=False, sort_keys=False))
+    click.echo(f"Added {package} to {method}.")
+    click.echo(f"Run 'hat tools install' to install it.")
+
+
+@tools_group.command("remove")
+@click.argument("method", type=click.Choice(["brew", "pipx", "npm"]))
+@click.argument("package")
+def tools_remove(method: str, package: str):
+    """Remove a tool from the list (does not uninstall).
+
+    \b
+    Examples:
+      hat tools remove brew k9s
+      hat tools remove pipx black
+    """
+    from hat.common import load_common_tools, COMMON_DIR
+    import yaml
+
+    tools = load_common_tools()
+    if not tools or method not in tools or package not in tools.get(method, []):
+        click.echo(f"{package} not found in {method} list.")
+        return
+
+    tools[method].remove(package)
+    tools_file = COMMON_DIR / "tools.yaml"
+    tools_file.write_text(yaml.dump(tools, default_flow_style=False, sort_keys=False))
+    click.echo(f"Removed {package} from {method} list.")
+
+
+@tools_group.command("install")
+def tools_install():
+    """Install/update all tools from ~/projects/common/tools.yaml."""
     from hat.common import load_common_tools
     tools_config = load_common_tools()
     if not tools_config:
@@ -21,13 +114,41 @@ def tools_check():
     mod.activate(tools_config, secrets={})
 
 
+@tools_group.command("check")
+def tools_check():
+    """Check which tools are installed vs missing."""
+    import shutil
+    from hat.common import load_common_tools
+
+    tools = load_common_tools()
+    if not tools:
+        click.echo("No tools configured. Run 'hat tools init' first.")
+        return
+
+    installed = 0
+    missing = 0
+    for method in ["brew", "pipx", "npm"]:
+        for tool in tools.get(method, []):
+            from hat.modules.tools import _npm_bin_name
+            bin_name = _npm_bin_name(tool) if method == "npm" else tool
+            if shutil.which(bin_name):
+                installed += 1
+            else:
+                missing += 1
+                click.echo(f"  missing: {tool} ({method})")
+
+    click.echo(f"\n  {installed} installed, {missing} missing")
+    if missing:
+        click.echo("  Run 'hat tools install' to install missing tools.")
+
+
 @tools_group.command("init")
 def tools_init():
     """Generate ~/projects/common/tools.yaml with default tools."""
     from hat.common import generate_tools_config
     path = generate_tools_config()
     click.echo(f"Generated {path}")
-    click.echo("Edit the file to customize your tools list.")
+    click.echo("View with: hat tools list")
 
 
 @click.group()
