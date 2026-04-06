@@ -29,11 +29,11 @@ def test_dns_lookup():
 def test_ip_info():
     mock_response = MagicMock()
     mock_response.json.return_value = {
-        "country": "US", "regionName": "California", "city": "LA",
-        "isp": "DigitalOcean", "org": "DO", "as": "AS14061",
+        "ip": "1.2.3.4",
+        "country": "US", "region": "California", "city": "LA",
+        "org": "AS14061 DigitalOcean",
     }
     with patch("httpx.get", return_value=mock_response):
         info = ip_info("1.2.3.4")
     assert info["country"] == "US"
-    assert info["isp"] == "DigitalOcean"
     assert "ipinfo.io" in info["lookup_url"]

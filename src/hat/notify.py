@@ -18,7 +18,10 @@ def is_enabled() -> bool:
 def send_notification(title: str, message: str):
     if not is_enabled():
         return
+    # Escape backslashes and quotes for AppleScript
+    safe_title = title.replace("\\", "\\\\").replace('"', '\\"')
+    safe_message = message.replace("\\", "\\\\").replace('"', '\\"')
     subprocess.Popen([
         "osascript", "-e",
-        f'display notification "{message}" with title "{title}"',
+        f'display notification "{safe_message}" with title "{safe_title}"',
     ])

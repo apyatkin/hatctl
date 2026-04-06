@@ -6,8 +6,8 @@ import click
 
 from hat.modules import Module, ModuleStatus
 
-MARKER_START = "# >>> ctx-managed >>>"
-MARKER_END = "# <<< ctx-managed <<<"
+MARKER_START = "# >>> hat-managed >>>"
+MARKER_END = "# <<< hat-managed <<<"
 DEFAULT_HOSTS_PATH = Path("/etc/hosts")
 
 

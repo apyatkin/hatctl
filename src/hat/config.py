@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+VALID_NAME_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
+
+
+def validate_company_name(name: str) -> None:
+    if not VALID_NAME_RE.match(name):
+        raise ValueError(f"Invalid company name '{name}'. Use only letters, numbers, hyphens, underscores.")
 
 
 def get_config_dir() -> Path:
@@ -16,6 +24,7 @@ def get_config_dir() -> Path:
 
 
 def load_company_config(name: str) -> dict[str, Any]:
+    validate_company_name(name)
     config_file = get_config_dir() / "companies" / name / "config.yaml"
     if not config_file.exists():
         raise FileNotFoundError(f"Company config not found: {config_file}")
@@ -24,6 +33,7 @@ def load_company_config(name: str) -> dict[str, Any]:
 
 
 def save_company_config(name: str, config: dict[str, Any]) -> None:
+    validate_company_name(name)
     config_file = get_config_dir() / "companies" / name / "config.yaml"
     config_file.parent.mkdir(parents=True, exist_ok=True)
     with open(config_file, "w") as f:
@@ -80,6 +90,8 @@ def _clear_refs(obj: Any) -> None:
 
 
 def clone_company_config(source: str, target: str) -> Path:
+    validate_company_name(source)
+    validate_company_name(target)
     config = load_company_config(source)
     config["name"] = target
     # Clear secrets

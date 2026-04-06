@@ -96,19 +96,19 @@ def _parse_cert(cert: dict, der: bytes, chain_error: str | None = None) -> dict:
 
 
 def ip_info(address: str) -> dict:
-    """Get IP address info using ip-api.com."""
+    """Get IP address info using ipinfo.io."""
     import httpx
     try:
-        resp = httpx.get(f"http://ip-api.com/json/{address}", timeout=10)
+        resp = httpx.get(f"https://ipinfo.io/{address}/json", timeout=10)
         data = resp.json()
         return {
-            "ip": address,
+            "ip": data.get("ip", address),
             "country": data.get("country", ""),
-            "region": data.get("regionName", ""),
+            "region": data.get("region", ""),
             "city": data.get("city", ""),
-            "isp": data.get("isp", ""),
+            "isp": data.get("org", ""),
             "org": data.get("org", ""),
-            "as": data.get("as", ""),
+            "as": data.get("org", ""),
             "lookup_url": f"https://ipinfo.io/{address}",
         }
     except Exception as e:

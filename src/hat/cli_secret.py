@@ -42,6 +42,8 @@ def secret_set(ref: str, file_path: str | None):
 def secret_get(ref: str):
     """Display a secret value."""
     from hat.secrets import SecretResolver
+    from hat.activity_log import log_event
     resolver = SecretResolver()
     value = resolver._resolve_one(ref)
+    log_event("secret-get", "keychain" if ref.startswith("keychain:") else "bitwarden", [ref])
     click.echo(value)
