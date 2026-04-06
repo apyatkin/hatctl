@@ -1,12 +1,12 @@
 from unittest.mock import patch, call
 
-from ctx.modules.ssh import SSHModule
+from hat.modules.ssh import SSHModule
 
 
 def test_ssh_activate_adds_keys():
     mod = SSHModule()
     config = {"keys": ["~/.ssh/acme_ed25519", "~/.ssh/acme_bastion"]}
-    with patch("ctx.modules.ssh.subprocess.run") as mock_run:
+    with patch("hat.modules.ssh.subprocess.run") as mock_run:
         mock_run.return_value.returncode = 0
         mod.activate(config, secrets={})
     expected_calls = [
@@ -20,7 +20,7 @@ def test_ssh_activate_adds_keys():
 def test_ssh_deactivate_removes_keys():
     mod = SSHModule()
     config = {"keys": ["~/.ssh/acme_ed25519"]}
-    with patch("ctx.modules.ssh.subprocess.run") as mock_run:
+    with patch("hat.modules.ssh.subprocess.run") as mock_run:
         mock_run.return_value.returncode = 0
         mod.activate(config, secrets={})
         mod.deactivate()

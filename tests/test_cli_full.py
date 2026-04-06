@@ -3,7 +3,7 @@ import textwrap
 
 from click.testing import CliRunner
 
-from ctx.cli import main
+from hat.cli import main
 
 
 def _setup_company(tmp_path, name="acme"):
@@ -21,7 +21,7 @@ def _setup_company(tmp_path, name="acme"):
 
 
 def test_ctx_list(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     _setup_company(tmp_path, "acme")
     _setup_company(tmp_path, "globex")
     runner = CliRunner()
@@ -32,7 +32,7 @@ def test_ctx_list(tmp_path, monkeypatch):
 
 
 def test_ctx_init(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     runner = CliRunner()
     result = runner.invoke(main, ["init", "newcorp"])
     assert result.exit_code == 0
@@ -40,7 +40,7 @@ def test_ctx_init(tmp_path, monkeypatch):
 
 
 def test_ctx_status_no_active(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     runner = CliRunner()
     result = runner.invoke(main, ["status"])
     assert result.exit_code == 0
@@ -48,10 +48,10 @@ def test_ctx_status_no_active(tmp_path, monkeypatch):
 
 
 def test_ctx_use_and_status(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     _setup_company(tmp_path, "acme")
     runner = CliRunner()
-    result = runner.invoke(main, ["use", "acme"])
+    result = runner.invoke(main, ["on", "acme"])
     assert result.exit_code == 0
 
     # Check state was written
@@ -66,10 +66,10 @@ def test_ctx_use_and_status(tmp_path, monkeypatch):
 
 
 def test_ctx_off(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     _setup_company(tmp_path, "acme")
     runner = CliRunner()
-    runner.invoke(main, ["use", "acme"])
+    runner.invoke(main, ["on", "acme"])
     result = runner.invoke(main, ["off"])
     assert result.exit_code == 0
 

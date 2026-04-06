@@ -1,12 +1,12 @@
 from unittest.mock import patch
 
-from ctx.modules.browser import BrowserModule
+from hat.modules.browser import BrowserModule
 
 
 def test_browser_activate():
     mod = BrowserModule()
     config = {"profile": "Acme", "app": "google-chrome"}
-    with patch("ctx.modules.browser.subprocess.Popen") as mock_popen:
+    with patch("hat.modules.browser.subprocess.Popen") as mock_popen:
         mod.activate(config, secrets={})
     mock_popen.assert_called_once_with(
         ["open", "-a", "Google Chrome", "--args", "--profile-directory=Acme"],
@@ -23,7 +23,7 @@ def test_browser_no_config():
 def test_browser_deactivate():
     mod = BrowserModule()
     config = {"profile": "Acme", "app": "google-chrome"}
-    with patch("ctx.modules.browser.subprocess.Popen"):
+    with patch("hat.modules.browser.subprocess.Popen"):
         mod.activate(config, secrets={})
     mod.deactivate()
     assert not mod.status().active

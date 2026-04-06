@@ -1,8 +1,8 @@
 import yaml
 from click.testing import CliRunner
 
-from ctx.cli import main
-from ctx.config import set_nested
+from hat.cli import main
+from hat.config import set_nested
 
 
 def _setup_company(tmp_path, name="acme"):
@@ -31,7 +31,7 @@ def test_set_nested_append_creates_list():
 
 
 def test_config_set_cli(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     _setup_company(tmp_path)
     runner = CliRunner()
     result = runner.invoke(main, ["config", "set", "acme", "cloud.nomad.addr", "https://nomad.acme.com"])
@@ -42,7 +42,7 @@ def test_config_set_cli(tmp_path, monkeypatch):
 
 
 def test_config_add_ssh_cli(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     _setup_company(tmp_path)
     runner = CliRunner()
     result = runner.invoke(main, ["config", "add-ssh", "acme", "~/.ssh/acme_ed25519"])
@@ -53,7 +53,7 @@ def test_config_add_ssh_cli(tmp_path, monkeypatch):
 
 
 def test_config_add_ssh_appends(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     _setup_company(tmp_path)
     runner = CliRunner()
     runner.invoke(main, ["config", "add-ssh", "acme", "~/.ssh/key1"])

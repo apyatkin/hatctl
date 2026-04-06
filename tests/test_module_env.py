@@ -1,8 +1,8 @@
-from ctx.modules.env import EnvModule
+from hat.modules.env import EnvModule
 
 
 def test_env_activate(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     mod = EnvModule()
     mod.activate({"FOO": "bar", "BAZ": "qux"}, secrets={})
     st = mod.status()
@@ -17,7 +17,7 @@ def test_env_activate(tmp_path, monkeypatch):
 
 
 def test_env_deactivate(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     mod = EnvModule()
     mod.activate({"FOO": "bar"}, secrets={})
     mod.deactivate()
@@ -27,7 +27,7 @@ def test_env_deactivate(tmp_path, monkeypatch):
 
 
 def test_env_empty_config(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     mod = EnvModule()
     mod.activate({}, secrets={})
     assert not mod.status().active

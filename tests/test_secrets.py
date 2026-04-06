@@ -1,6 +1,6 @@
 import pytest
 
-from ctx.secrets import SecretResolver, parse_secret_ref
+from hat.secrets import SecretResolver, parse_secret_ref
 
 
 def test_parse_keychain_ref():

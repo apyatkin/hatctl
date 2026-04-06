@@ -1,4 +1,4 @@
-from ctx.modules import Module, ModuleStatus, Orchestrator
+from hat.modules import Module, ModuleStatus, Orchestrator
 
 
 class FakeModuleA(Module):

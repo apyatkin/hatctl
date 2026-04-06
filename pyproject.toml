@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ctx-switch"
-version = "0.1.0"
+name = "hat"
+version = "1.0.0"
 description = "Company context switcher"
 requires-python = ">=3.11"
 dependencies = [
@@ -15,10 +15,10 @@ dependencies = [
 ]
 
 [project.scripts]
-ctx = "ctx.cli:main"
+hat = "hat.cli:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ctx"]
+packages = ["src/hat"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

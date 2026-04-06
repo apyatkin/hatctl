@@ -1,4 +1,4 @@
-from ctx.modules.hosts import HostsModule, MARKER_START, MARKER_END
+from hat.modules.hosts import HostsModule, MARKER_START, MARKER_END
 
 
 def test_hosts_activate(tmp_path):

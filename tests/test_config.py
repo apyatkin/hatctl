@@ -3,22 +3,22 @@ import textwrap
 
 import pytest
 
-from ctx.config import load_company_config, list_companies, get_config_dir
+from hat.config import load_company_config, list_companies, get_config_dir
 
 
 def test_get_config_dir(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     assert get_config_dir() == tmp_path
 
 
 def test_get_config_dir_default(monkeypatch):
-    monkeypatch.delenv("CTX_CONFIG_DIR", raising=False)
+    monkeypatch.delenv("HAT_CONFIG_DIR", raising=False)
     result = get_config_dir()
-    assert str(result).endswith("Library/ctx")
+    assert str(result).endswith("Library/hat")
 
 
 def test_load_company_config(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     company_dir = tmp_path / "companies" / "acme"
     company_dir.mkdir(parents=True)
     config_file = company_dir / "config.yaml"
@@ -34,13 +34,13 @@ def test_load_company_config(tmp_path, monkeypatch):
 
 
 def test_load_company_config_missing(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     with pytest.raises(FileNotFoundError):
         load_company_config("nonexistent")
 
 
 def test_list_companies(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     companies_dir = tmp_path / "companies"
     companies_dir.mkdir()
     (companies_dir / "acme").mkdir()
@@ -52,6 +52,6 @@ def test_list_companies(tmp_path, monkeypatch):
 
 
 def test_list_companies_empty(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     result = list_companies()
     assert result == []

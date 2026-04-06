@@ -1,8 +1,8 @@
-from ctx.modules.git import GitModule
+from hat.modules.git import GitModule
 
 
 def test_git_activate(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     mod = GitModule()
     config = {"identity": {"name": "Alex", "email": "alex@acme.com"}}
     mod.activate(config, secrets={})
@@ -17,7 +17,7 @@ def test_git_activate(tmp_path, monkeypatch):
 
 
 def test_git_deactivate(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     mod = GitModule()
     config = {"identity": {"name": "Alex", "email": "alex@acme.com"}}
     mod.activate(config, secrets={})
@@ -26,7 +26,7 @@ def test_git_deactivate(tmp_path, monkeypatch):
 
 
 def test_git_no_identity(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     mod = GitModule()
     mod.activate({}, secrets={})
     assert not mod.status().active

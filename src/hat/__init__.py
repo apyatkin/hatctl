@@ -1,0 +1,1 @@
+"""hat — Company context switcher."""

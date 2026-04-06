@@ -1,11 +1,11 @@
-from ctx.shell import generate_shell_init
+from hat.shell import generate_shell_init
 
 
 def test_generate_zsh_init():
     output = generate_shell_init("zsh")
     assert "precmd" in output
     assert "state.env" in output
-    assert "CTX_ACTIVE" in output
+    assert "HAT_ACTIVE" in output
 
 
 def test_generate_unknown_shell():
@@ -15,7 +15,7 @@ def test_generate_unknown_shell():
 
 
 def test_shell_init_sources_aliases():
-    from ctx.shell import generate_shell_init
+    from hat.shell import generate_shell_init
     output = generate_shell_init("zsh")
     assert "aliases.sh" in output
     assert "completions.sh" in output

@@ -1,10 +1,10 @@
 from unittest.mock import patch, call, MagicMock
 
-from ctx.modules.cloud import CloudModule
+from hat.modules.cloud import CloudModule
 
 
 def test_cloud_env_vars(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     mod = CloudModule()
     config = {
         "nomad": {
@@ -20,7 +20,7 @@ def test_cloud_env_vars(tmp_path, monkeypatch):
         "keychain:nomad-token": "s3cret",
         "keychain:hcloud-token": "hetzner123",
     }
-    with patch("ctx.modules.cloud.subprocess.run") as mock_run:
+    with patch("hat.modules.cloud.subprocess.run") as mock_run:
         mock_run.return_value.returncode = 0
         mod.activate(config, secrets)
 
@@ -37,7 +37,7 @@ def test_cloud_env_vars(tmp_path, monkeypatch):
 def test_cloud_yandex_profile():
     mod = CloudModule()
     config = {"yandex": {"profile": "acme"}}
-    with patch("ctx.modules.cloud.subprocess.run") as mock_run:
+    with patch("hat.modules.cloud.subprocess.run") as mock_run:
         mock_run.return_value.returncode = 0
         mod.activate(config, secrets={})
     mock_run.assert_any_call(
@@ -49,7 +49,7 @@ def test_cloud_yandex_profile():
 def test_cloud_digitalocean_context():
     mod = CloudModule()
     config = {"digitalocean": {"context": "acme"}}
-    with patch("ctx.modules.cloud.subprocess.run") as mock_run:
+    with patch("hat.modules.cloud.subprocess.run") as mock_run:
         mock_run.return_value.returncode = 0
         mod.activate(config, secrets={})
     mock_run.assert_any_call(
@@ -61,7 +61,7 @@ def test_cloud_digitalocean_context():
 def test_cloud_aws_sso():
     mod = CloudModule()
     config = {"aws": {"profile": "acme-prod", "sso": True}}
-    with patch("ctx.modules.cloud.subprocess.run") as mock_run:
+    with patch("hat.modules.cloud.subprocess.run") as mock_run:
         mock_run.return_value.returncode = 0
         mod.activate(config, secrets={})
     mock_run.assert_any_call(

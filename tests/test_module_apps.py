@@ -1,12 +1,12 @@
 from unittest.mock import patch
 
-from ctx.modules.apps import AppsModule
+from hat.modules.apps import AppsModule
 
 
 def test_apps_activate_slack():
     mod = AppsModule()
     config = {"slack": {"workspace": "acme-corp"}}
-    with patch("ctx.modules.apps.subprocess.Popen") as mock_popen:
+    with patch("hat.modules.apps.subprocess.Popen") as mock_popen:
         mod.activate(config, secrets={})
     mock_popen.assert_called_once_with(
         ["open", "slack://channel?team=acme-corp"],

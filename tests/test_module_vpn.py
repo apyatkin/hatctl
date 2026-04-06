@@ -1,6 +1,6 @@
 from unittest.mock import patch, call
 
-from ctx.modules.vpn import VPNModule
+from hat.modules.vpn import VPNModule
 
 
 def test_vpn_wireguard_activate():
@@ -10,8 +10,8 @@ def test_vpn_wireguard_activate():
         "config": "/etc/wireguard/wg-acme.conf",
         "interface": "wg-acme",
     }
-    with patch("ctx.modules.vpn.subprocess.run") as mock_run, \
-         patch("ctx.modules.vpn.click.confirm"):
+    with patch("hat.modules.vpn.subprocess.run") as mock_run, \
+         patch("hat.modules.vpn.click.confirm"):
         mock_run.return_value.returncode = 0
         mod.activate(config, secrets={})
     mock_run.assert_called_once_with(
@@ -23,8 +23,8 @@ def test_vpn_wireguard_activate():
 def test_vpn_tailscale_activate():
     mod = VPNModule()
     config = {"provider": "tailscale"}
-    with patch("ctx.modules.vpn.subprocess.run") as mock_run, \
-         patch("ctx.modules.vpn.click.confirm"):
+    with patch("hat.modules.vpn.subprocess.run") as mock_run, \
+         patch("hat.modules.vpn.click.confirm"):
         mock_run.return_value.returncode = 0
         mod.activate(config, secrets={})
     mock_run.assert_called_once_with(
@@ -40,8 +40,8 @@ def test_vpn_deactivate_wireguard():
         "config": "/etc/wireguard/wg-acme.conf",
         "interface": "wg-acme",
     }
-    with patch("ctx.modules.vpn.subprocess.run") as mock_run, \
-         patch("ctx.modules.vpn.click.confirm"):
+    with patch("hat.modules.vpn.subprocess.run") as mock_run, \
+         patch("hat.modules.vpn.click.confirm"):
         mock_run.return_value.returncode = 0
         mod.activate(config, secrets={})
         mod.deactivate()

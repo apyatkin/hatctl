@@ -1,4 +1,4 @@
-from ctx.common import generate_aliases, generate_completions, generate_tools_config, load_common_tools
+from hat.common import generate_aliases, generate_completions, generate_tools_config, load_common_tools
 
 
 def test_generate_aliases(tmp_path):

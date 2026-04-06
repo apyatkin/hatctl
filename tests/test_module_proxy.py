@@ -1,8 +1,8 @@
-from ctx.modules.proxy import ProxyModule
+from hat.modules.proxy import ProxyModule
 
 
 def test_proxy_activate(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     mod = ProxyModule()
     config = {
         "http": "http://proxy.acme.com:3128",
@@ -19,7 +19,7 @@ def test_proxy_activate(tmp_path, monkeypatch):
 
 
 def test_proxy_deactivate(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     mod = ProxyModule()
     config = {"http": "http://proxy.acme.com:3128"}
     mod.activate(config, secrets={})

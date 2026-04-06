@@ -1,6 +1,6 @@
 from unittest.mock import patch
 
-from ctx.modules.dns import DNSModule
+from hat.modules.dns import DNSModule
 
 
 def test_dns_activate(tmp_path):
@@ -9,8 +9,8 @@ def test_dns_activate(tmp_path):
         "resolvers": ["10.0.0.53", "10.0.0.54"],
         "search_domains": ["acme.internal"],
     }
-    with patch("ctx.modules.dns.RESOLVER_DIR", tmp_path), \
-         patch("ctx.modules.dns.click.confirm"):
+    with patch("hat.modules.dns.RESOLVER_DIR", tmp_path), \
+         patch("hat.modules.dns.click.confirm"):
         mod.activate(config, secrets={})
 
     resolver_file = tmp_path / "acme.internal"
@@ -26,8 +26,8 @@ def test_dns_deactivate(tmp_path):
         "resolvers": ["10.0.0.53"],
         "search_domains": ["acme.internal", "acme.corp"],
     }
-    with patch("ctx.modules.dns.RESOLVER_DIR", tmp_path), \
-         patch("ctx.modules.dns.click.confirm"):
+    with patch("hat.modules.dns.RESOLVER_DIR", tmp_path), \
+         patch("hat.modules.dns.click.confirm"):
         mod.activate(config, secrets={})
         mod.deactivate()
 

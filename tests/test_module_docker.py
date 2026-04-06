@@ -1,6 +1,6 @@
 from unittest.mock import patch, call
 
-from ctx.modules.docker import DockerModule
+from hat.modules.docker import DockerModule
 
 
 def test_docker_activate():
@@ -18,7 +18,7 @@ def test_docker_activate():
         "keychain:reg-user": "admin",
         "keychain:reg-pass": "s3cret",
     }
-    with patch("ctx.modules.docker.subprocess.run") as mock_run:
+    with patch("hat.modules.docker.subprocess.run") as mock_run:
         mock_run.return_value.returncode = 0
         mod.activate(config, secrets)
     mock_run.assert_called_once_with(
@@ -36,7 +36,7 @@ def test_docker_deactivate():
         "registries": [{"host": "registry.acme.com", "username_ref": "keychain:u", "password_ref": "keychain:p"}]
     }
     secrets = {"keychain:u": "a", "keychain:p": "b"}
-    with patch("ctx.modules.docker.subprocess.run") as mock_run:
+    with patch("hat.modules.docker.subprocess.run") as mock_run:
         mock_run.return_value.returncode = 0
         mod.activate(config, secrets)
         mod.deactivate()

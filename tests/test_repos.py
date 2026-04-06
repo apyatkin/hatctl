@@ -3,7 +3,7 @@ import subprocess
 from pathlib import Path
 from unittest.mock import patch, MagicMock
 
-from ctx.repos import (
+from hat.repos import (
     list_remote_repos,
     clone_repos,
     pull_repos,
@@ -33,7 +33,7 @@ def test_list_remote_gitlab():
     }
     secrets = {"keychain:token": "glpat-123"}
 
-    with patch("ctx.repos.httpx.Client") as mock_client_cls:
+    with patch("hat.repos.httpx.Client") as mock_client_cls:
         mock_client = MagicMock()
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
@@ -62,7 +62,7 @@ def test_list_remote_github():
     }
     secrets = {"keychain:gh-token": "ghp_123"}
 
-    with patch("ctx.repos.httpx.Client") as mock_client_cls:
+    with patch("hat.repos.httpx.Client") as mock_client_cls:
         mock_client = MagicMock()
         mock_client.__enter__ = MagicMock(return_value=mock_client)
         mock_client.__exit__ = MagicMock(return_value=False)
@@ -80,7 +80,7 @@ def test_pull_repos_skips_dirty(tmp_path):
     repo_dir.mkdir(parents=True)
     (repo_dir / ".git").mkdir()
 
-    with patch("ctx.repos.subprocess.run") as mock_run:
+    with patch("hat.repos.subprocess.run") as mock_run:
         # git status --porcelain returns non-empty = dirty
         mock_run.return_value = MagicMock(returncode=0, stdout="M file.txt\n")
         results = pull_repos(tmp_path / "acme" / "repos")

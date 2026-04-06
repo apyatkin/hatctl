@@ -2,19 +2,19 @@ import json
 import time
 from unittest.mock import patch, MagicMock
 
-from ctx.modules.tools import ToolsModule
+from hat.modules.tools import ToolsModule
 
 
 def test_tools_installs_missing_brew(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     mod = ToolsModule()
     config = {"brew": ["kubectl", "helm"], "pipx": []}
 
     def fake_which(name):
         return None  # nothing installed
 
-    with patch("ctx.modules.tools.shutil.which", side_effect=fake_which), \
-         patch("ctx.modules.tools.subprocess.run") as mock_run:
+    with patch("hat.modules.tools.shutil.which", side_effect=fake_which), \
+         patch("hat.modules.tools.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0, stdout="")
         mod.activate(config, secrets={})
 
@@ -26,12 +26,12 @@ def test_tools_installs_missing_brew(tmp_path, monkeypatch):
 
 
 def test_tools_installs_missing_pipx(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     mod = ToolsModule()
     config = {"brew": [], "pipx": ["ansible", "ruff"]}
 
-    with patch("ctx.modules.tools.shutil.which", return_value=None), \
-         patch("ctx.modules.tools.subprocess.run") as mock_run:
+    with patch("hat.modules.tools.shutil.which", return_value=None), \
+         patch("hat.modules.tools.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0, stdout="")
         mod.activate(config, secrets={})
 
@@ -43,7 +43,7 @@ def test_tools_installs_missing_pipx(tmp_path, monkeypatch):
 
 
 def test_tools_skips_installed(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
     # Pre-populate tools_state.json with recent timestamps
     state_file = tmp_path / "tools_state.json"
     now = time.time()
@@ -52,8 +52,8 @@ def test_tools_skips_installed(tmp_path, monkeypatch):
     mod = ToolsModule()
     config = {"brew": ["kubectl", "helm"], "pipx": []}
 
-    with patch("ctx.modules.tools.shutil.which", return_value="/usr/local/bin/kubectl"), \
-         patch("ctx.modules.tools.subprocess.run") as mock_run:
+    with patch("hat.modules.tools.shutil.which", return_value="/usr/local/bin/kubectl"), \
+         patch("hat.modules.tools.subprocess.run") as mock_run:
         mock_run.return_value = MagicMock(returncode=0, stdout="")
         mod.activate(config, secrets={})
 

@@ -4,11 +4,11 @@ import textwrap
 import yaml
 from click.testing import CliRunner
 
-from ctx.cli import main
+from hat.cli import main
 
 
 def test_full_lifecycle(tmp_path, monkeypatch):
-    monkeypatch.setenv("CTX_CONFIG_DIR", str(tmp_path))
+    monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
 
     runner = CliRunner()
 
@@ -33,7 +33,7 @@ def test_full_lifecycle(tmp_path, monkeypatch):
     assert "acme" in result.output
 
     # Use acme
-    result = runner.invoke(main, ["use", "acme"])
+    result = runner.invoke(main, ["on", "acme"])
     assert result.exit_code == 0
     assert "Activating acme" in result.output
 
@@ -62,7 +62,7 @@ def test_full_lifecycle(tmp_path, monkeypatch):
     config_file2.write_text(yaml.dump(config2))
 
     # Switch to globex — should deactivate acme first
-    result = runner.invoke(main, ["use", "globex"])
+    result = runner.invoke(main, ["on", "globex"])
     assert "Deactivating acme" in result.output
     assert "Activating globex" in result.output
 
