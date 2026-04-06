@@ -56,7 +56,7 @@ def main():
 
 
 @main.command("on")
-@click.argument("company")
+@click.argument("company", shell_complete=_complete_company)
 @click.option("--check-tools", is_flag=True, help="Force tool update check")
 def on_cmd(company: str, check_tools: bool):
     """Switch context to a company."""
@@ -149,7 +149,7 @@ def list_cmd():
 
 
 @main.command()
-@click.argument("company")
+@click.argument("company", shell_complete=_complete_company)
 def init(company: str):
     """Scaffold a new company config."""
     config_dir = get_config_dir() / "companies" / company
@@ -190,7 +190,7 @@ def shell_init(shell: str):
 
 
 @main.command("run")
-@click.argument("company")
+@click.argument("company", shell_complete=_complete_company)
 @click.argument("command", nargs=-1, type=click.UNPROCESSED)
 def run_cmd(company: str, command: tuple[str, ...]):
     """Run a command in a company's environment without switching context."""
@@ -208,7 +208,7 @@ def run_cmd(company: str, command: tuple[str, ...]):
 
 
 @main.command("env")
-@click.argument("company")
+@click.argument("company", shell_complete=_complete_company)
 @click.option("--export", "export_format", is_flag=True, help="Output in export format")
 def env_cmd(company: str, export_format: bool):
     """Show env vars that would be set for a company (dry run)."""
@@ -225,7 +225,7 @@ def env_cmd(company: str, export_format: bool):
 
 
 @main.command("shell")
-@click.argument("company")
+@click.argument("company", shell_complete=_complete_company)
 def shell_cmd(company: str):
     """Spawn a new shell with a company's environment."""
     import os
@@ -238,7 +238,7 @@ def shell_cmd(company: str):
 
 
 @main.command("ssh")
-@click.argument("company")
+@click.argument("company", shell_complete=_complete_company)
 @click.argument("host")
 @click.option("-u", "--user", default=None, help="SSH user")
 def ssh_cmd(company: str, host: str, user: str | None):
@@ -380,6 +380,18 @@ def tunnel_stop():
     pids_file.unlink()
     for r in results:
         click.echo(f"  pid {r['pid']}: {r['status']}")
+
+
+@main.command("completion")
+@click.argument("shell", default="zsh")
+def completion_cmd(shell: str):
+    """Output shell completion code."""
+    if shell == "zsh":
+        click.echo('eval "$(_HAT_COMPLETE=zsh_source hat)"')
+    elif shell == "bash":
+        click.echo('eval "$(_HAT_COMPLETE=bash_source hat)"')
+    else:
+        click.echo(f"Unsupported shell: {shell}")
 
 
 from hat.cli_repos import repos
