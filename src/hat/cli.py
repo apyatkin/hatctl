@@ -94,6 +94,8 @@ def on_cmd(company: str, check_tools: bool):
     sm.set_active(company, activated)
     sm.save()
     click.echo(f"Context switched to {company}.")
+    from hat.activity_log import log_event
+    log_event("on", company, activated)
 
 
 @main.command()
@@ -104,6 +106,7 @@ def off():
         click.echo("No active context.")
         return
 
+    company_name = sm.active_company
     click.echo(f"Deactivating {sm.active_company}...")
     orch = _build_orchestrator()
     orch.deactivate(sm.activated_modules)
@@ -111,6 +114,8 @@ def off():
     sm.clear_env()
     sm.save()
     click.echo("Context deactivated.")
+    from hat.activity_log import log_event
+    log_event("off", company_name)
 
 
 @main.command()
@@ -313,6 +318,23 @@ def diff_cmd(company1: str, company2: str):
         click.echo("Configs are identical.")
     else:
         click.echo(output)
+
+
+@main.command("log")
+@click.option("--company", default=None, help="Filter by company")
+@click.option("--limit", "-n", default=20, help="Number of entries")
+def log_cmd(company: str | None, limit: int):
+    """Show activity log."""
+    from hat.activity_log import read_log
+    entries = read_log(company, limit)
+    if not entries:
+        click.echo("No log entries.")
+        return
+    for e in entries:
+        ts = e["timestamp"][:19].replace("T", " ")
+        modules = ", ".join(e.get("modules", []))
+        suffix = f" [{modules}]" if modules else ""
+        click.echo(f"  {ts}  {e['action']:3}  {e['company']}{suffix}")
 
 
 @main.group("tunnel")
