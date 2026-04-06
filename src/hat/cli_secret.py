@@ -3,17 +3,26 @@ from __future__ import annotations
 import click
 
 
+def _collect_config_secrets(config: dict) -> list[str]:
+    """Collect all secret refs from a config — *_ref fields + keychain: entries in ssh.keys."""
+    from hat.secrets import SecretResolver
+    resolver = SecretResolver()
+    refs = resolver._find_refs(config)
+    for key in config.get("ssh", {}).get("keys", []):
+        if isinstance(key, str) and (key.startswith("keychain:") or key.startswith("bitwarden:")):
+            refs.append(key)
+    return refs
+
+
 def _all_known_refs() -> list[str]:
     """All known secret refs — from registry + company configs."""
     from hat.secret_registry import load as load_registry
     from hat.config import list_companies, load_company_config
-    from hat.secrets import SecretResolver
     refs = set(load_registry())
-    resolver = SecretResolver()
     for company in list_companies():
         try:
             config = load_company_config(company)
-            refs.update(resolver._find_refs(config))
+            refs.update(_collect_config_secrets(config))
         except Exception:
             continue
     return sorted(refs)
@@ -138,7 +147,7 @@ def secret_list(company: str | None, check: bool):
         except Exception:
             click.echo(f"Company '{company}' not found.")
             return
-        refs = sorted(set(resolver._find_refs(config)))
+        refs = sorted(set(_collect_config_secrets(config)))
         if not refs:
             click.echo(f"No secrets referenced in {company} config.")
             return
@@ -158,7 +167,7 @@ def secret_list(company: str | None, check: bool):
             config = load_company_config(name)
         except Exception:
             continue
-        refs = resolver._find_refs(config)
+        refs = _collect_config_secrets(config)
         if refs:
             company_refs[name] = sorted(set(refs))
             all_refs.update(refs)
@@ -229,36 +238,20 @@ def secret_scan():
     resolver = SecretResolver()
     found = []
 
-    # Scan all company configs for refs
     for name in list_companies():
         try:
             config = load_company_config(name)
         except Exception:
             continue
-        refs = resolver._find_refs(config)
+        refs = _collect_config_secrets(config)
         for ref in refs:
             try:
                 resolver._resolve_one(ref)
                 register(ref)
-                found.append(ref)
+                if ref not in found:
+                    found.append(ref)
             except Exception:
                 pass
-
-    # Also try to find any keychain entries matching ssh keys in configs
-    for name in list_companies():
-        try:
-            config = load_company_config(name)
-        except Exception:
-            continue
-        for key in config.get("ssh", {}).get("keys", []):
-            if key.startswith("keychain:"):
-                try:
-                    resolver._resolve_one(key)
-                    register(key)
-                    if key not in found:
-                        found.append(key)
-                except Exception:
-                    pass
 
     if found:
         click.echo(f"Registered {len(found)} secret(s):")
