@@ -58,7 +58,8 @@ def main():
 @main.command("on")
 @click.argument("company", shell_complete=_complete_company)
 @click.option("--check-tools", is_flag=True, help="Force tool update check")
-def on_cmd(company: str, check_tools: bool):
+@click.option("--no-vpn", is_flag=True, help="Skip VPN connection")
+def on_cmd(company: str, check_tools: bool, no_vpn: bool):
     """Switch context to a company."""
     config = load_company_config(company)
     sm = StateManager()
@@ -84,6 +85,9 @@ def on_cmd(company: str, check_tools: bool):
     if common_tools:
         module_config["tools"] = common_tools
 
+    if no_vpn:
+        module_config.pop("vpn", None)
+
     # Activate
     click.echo(f"Activating {company}...")
     try:
@@ -108,14 +112,41 @@ def on_cmd(company: str, check_tools: bool):
 @main.command()
 @click.argument("company", required=False)
 def off(company: str | None):
-    """Deactivate current context."""
+    """Deactivate current context and disconnect VPN."""
     sm = StateManager()
     if not sm.active_company:
         click.echo("No active context.")
         return
 
     company_name = sm.active_company
-    click.echo(f"Deactivating {sm.active_company}...")
+    click.echo(f"Deactivating {company_name}...")
+
+    # Disconnect VPN if it was activated
+    if "vpn" in sm.activated_modules:
+        try:
+            config = load_company_config(company_name)
+            vpn_config = config.get("vpn", {})
+            provider = vpn_config.get("provider")
+            if provider:
+                import os
+                import subprocess
+                env = {**os.environ, "PATH": f"/opt/homebrew/bin:/usr/local/bin:{os.environ.get('PATH', '')}"}
+                from hat.modules.vpn import _find_binary
+                if provider == "wireguard":
+                    interface = vpn_config.get("interface") or vpn_config.get("config")
+                    cmd = ["sudo", _find_binary("wg-quick"), "down", interface]
+                elif provider == "amnezia":
+                    cmd = ["sudo", _find_binary("amnezia-cli"), "disconnect"]
+                elif provider == "tailscale":
+                    cmd = ["sudo", _find_binary("tailscale"), "down"]
+                else:
+                    cmd = None
+                if cmd:
+                    click.echo(f"  vpn down ({provider})...")
+                    subprocess.run(cmd, env=env)
+        except Exception as e:
+            click.echo(f"  vpn disconnect warning: {e}")
+
     orch = _build_orchestrator()
     orch.deactivate(sm.activated_modules)
     sm.clear()
