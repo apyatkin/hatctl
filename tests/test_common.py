@@ -1,4 +1,4 @@
-from ctx.common import generate_aliases, generate_completions
+from ctx.common import generate_aliases, generate_completions, generate_tools_config, load_common_tools
 
 
 def test_generate_aliases(tmp_path):
@@ -31,3 +31,25 @@ def test_generate_completions_idempotent(tmp_path):
     generate_completions(tmp_path)
     generate_completions(tmp_path)
     assert (tmp_path / "completions.sh").exists()
+
+
+def test_generate_tools_config(tmp_path):
+    path = generate_tools_config(tmp_path)
+    assert path.exists()
+    content = path.read_text()
+    assert "kubectl" in content
+    assert "ansible" in content
+
+
+def test_load_common_tools(tmp_path):
+    generate_tools_config(tmp_path)
+    tools = load_common_tools(tmp_path)
+    assert "brew" in tools
+    assert "kubectl" in tools["brew"]
+    assert "pipx" in tools
+    assert "ansible" in tools["pipx"]
+
+
+def test_load_common_tools_missing(tmp_path):
+    tools = load_common_tools(tmp_path)
+    assert tools == {}

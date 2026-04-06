@@ -75,6 +75,12 @@ def use(company: str, check_tools: bool):
 
     module_config = {k: v for k, v in config.items() if k in MODULE_NAMES}
 
+    # Tools come from ~/projects/common/tools.yaml, not per-company
+    from ctx.common import load_common_tools
+    common_tools = load_common_tools()
+    if common_tools:
+        module_config["tools"] = common_tools
+
     # Activate
     click.echo(f"Activating {company}...")
     orch = _build_orchestrator()
@@ -158,7 +164,6 @@ def init(company: str):
         "proxy": {},
         "browser": {},
         "apps": {},
-        "tools": {"brew": [], "pipx": []},
     }
     config_file.write_text(yaml.dump(template, default_flow_style=False, sort_keys=False))
     click.echo(f"Created {config_file}")
@@ -292,17 +297,25 @@ def tools_group():
 
 
 @tools_group.command("check")
-@click.argument("company")
-def tools_check(company: str):
-    """Check and install/update tools without switching context."""
-    config = load_company_config(company)
-    tools_config = config.get("tools", {})
+def tools_check():
+    """Check and install/update tools from ~/projects/common/tools.yaml."""
+    from ctx.common import load_common_tools
+    tools_config = load_common_tools()
     if not tools_config:
-        click.echo("No tools configured.")
+        click.echo("No tools configured. Run 'ctx tools init' first.")
         return
     from ctx.modules.tools import ToolsModule
     mod = ToolsModule()
     mod.activate(tools_config, secrets={})
+
+
+@tools_group.command("init")
+def tools_init():
+    """Generate ~/projects/common/tools.yaml with default tools."""
+    from ctx.common import generate_tools_config
+    path = generate_tools_config()
+    click.echo(f"Generated {path}")
+    click.echo("Edit the file to customize your tools list.")
 
 
 # --- Aliases command ---

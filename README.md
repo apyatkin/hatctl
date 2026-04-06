@@ -31,7 +31,7 @@ This sources env vars on every prompt and adds a `[company]` indicator to your p
 ctx init acme
 
 # Edit the config
-$EDITOR ~/.config/ctx/companies/acme/config.yaml
+$EDITOR ~/Library/ctx/companies/acme/config.yaml
 
 # Switch to that company
 ctx use acme
@@ -48,7 +48,7 @@ ctx off
 
 ## Company Config
 
-Each company lives in `~/.config/ctx/companies/<name>/config.yaml`. All sections are optional — only configure what you need:
+Each company lives in `~/Library/ctx/companies/<name>/config.yaml`. All sections are optional — only configure what you need:
 
 ```yaml
 name: acme
@@ -73,11 +73,11 @@ env:
 ssh:
   keys:
     - ~/.ssh/acme_ed25519
-  config: ~/.config/ctx/companies/acme/ssh_config
+  config: ~/Library/ctx/companies/acme/ssh_config
 
 vpn:
   provider: wireguard   # wireguard | amnezia | tailscale
-  config: ~/.config/ctx/companies/acme/wg0.conf
+  config: ~/Library/ctx/companies/acme/wg0.conf
   interface: wg-acme
 
 dns:
@@ -95,7 +95,7 @@ cloud:
     profile: acme-prod
     sso: true
   kubernetes:
-    kubeconfig: ~/.config/ctx/companies/acme/kubeconfig
+    kubeconfig: ~/Library/ctx/companies/acme/kubeconfig
     refresh:
       provider: yandex   # yandex | aws | digitalocean
       cluster: acme-k8s
@@ -143,18 +143,6 @@ apps:
   favro:
     organization_id: "org-123"
     token_ref: keychain:acme-favro-token
-
-tools:
-  brew:
-    - kubectl
-    - helm
-    - terraform
-    - nomad
-    - vault
-    - consul
-  pipx:
-    - ansible
-    - ansible-lint
 ```
 
 ## Secrets
@@ -191,11 +179,41 @@ Repos are cloned to `~/projects/<company>/repos/`.
 
 ## Tool Management
 
-Tools listed in `tools.brew` and `tools.pipx` are automatically checked on each `ctx use`. Missing tools are installed, outdated tools are upgraded. Update checks are throttled to once per 24 hours.
+Tools are defined globally in `~/projects/common/tools.yaml` (not per-company). They're automatically checked on each `ctx use`. Missing tools are installed, outdated tools are upgraded. Update checks are throttled to once per 24 hours.
 
 ```bash
+# Generate default tools.yaml
+ctx tools init
+
+# Edit to customize
+$EDITOR ~/projects/common/tools.yaml
+
 # Check tools without switching context
-ctx tools check acme
+ctx tools check
+```
+
+`tools.yaml` format:
+```yaml
+brew:
+  - kubectl
+  - helm
+  - terraform
+  - nomad
+  - vault
+  - consul
+  - yc
+  - doctl
+  - hcloud
+  - gh
+  - glab
+  - jq
+  - wireguard-tools
+  - docker
+pipx:
+  - ansible
+  - ansible-lint
+  - yamllint
+  - ruff
 ```
 
 - `brew` tools: installed via Homebrew
@@ -207,7 +225,7 @@ ctx tools check acme
 
 ```bash
 # Set skills source in global config
-echo "skills_source: $(pwd)/skills" > ~/.config/ctx/config.yaml
+echo "skills_source: $(pwd)/skills" > ~/Library/ctx/config.yaml
 
 # Deploy skills as symlinks
 ctx skills deploy
@@ -234,7 +252,18 @@ Modules activate in this order (deactivate in reverse):
 11. **browser** — open browser with company profile
 12. **apps** — open Slack, etc.
 
-State is tracked in `~/.config/ctx/state.json` so `ctx off` and `ctx status` work across shell restarts.
+State is tracked in `~/Library/ctx/state.json` so `ctx off` and `ctx status` work across shell restarts.
+
+## Shell Aliases & Completions
+
+Generate global aliases and completions for all DevOps tools:
+
+```bash
+ctx aliases generate       # ~/projects/common/aliases.sh
+ctx completions generate   # ~/projects/common/completions.sh
+```
+
+These are sourced automatically by `ctx shell-init zsh`. Includes aliases like `k` for kubectl, `tf` for tofu, `dc` for docker compose, and completions for all tools.
 
 ## All Commands
 
@@ -252,7 +281,11 @@ ctx repos list <company>       list local vs remote repos
 
 ctx secret set <ref>           store a secret
 
-ctx tools check <company>      check/install tools without switching
+ctx tools init                 generate ~/projects/common/tools.yaml
+ctx tools check                check/install tools
+
+ctx aliases generate           generate ~/projects/common/aliases.sh
+ctx completions generate       generate ~/projects/common/completions.sh
 
 ctx skills deploy              deploy Claude Code skills
 

@@ -18,7 +18,7 @@ uv run pytest tests/test_foo.py -v # run single test file
 ## Architecture
 
 - `src/ctx/cli.py` — Click command definitions, wires everything together
-- `src/ctx/config.py` — YAML config loading from `~/.config/ctx/companies/<name>/config.yaml`
+- `src/ctx/config.py` — YAML config loading from `~/Library/ctx/companies/<name>/config.yaml`
 - `src/ctx/state.py` — State management (`state.json` + `state.env`)
 - `src/ctx/secrets.py` — Secret resolution from macOS Keychain and Bitwarden
 - `src/ctx/shell.py` — Shell integration code generation for zsh

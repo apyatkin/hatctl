@@ -1,9 +1,53 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any
+
+import yaml
 
 PROJECTS_DIR = Path.home() / "projects"
 COMMON_DIR = PROJECTS_DIR / "common"
+
+DEFAULT_TOOLS = {
+    "brew": [
+        "kubectl",
+        "helm",
+        "terraform",
+        "nomad",
+        "consul",
+        "vault",
+        "yc",
+        "doctl",
+        "hcloud",
+        "gh",
+        "glab",
+        "jq",
+        "wireguard-tools",
+        "docker",
+    ],
+    "pipx": [
+        "ansible",
+        "ansible-lint",
+        "yamllint",
+        "ruff",
+    ],
+}
+
+
+def load_common_tools(common_dir: Path | None = None) -> dict[str, Any]:
+    tools_file = (common_dir or COMMON_DIR) / "tools.yaml"
+    if not tools_file.exists():
+        return {}
+    with open(tools_file) as f:
+        return yaml.safe_load(f) or {}
+
+
+def generate_tools_config(target_dir: Path | None = None) -> Path:
+    target = target_dir or COMMON_DIR
+    target.mkdir(parents=True, exist_ok=True)
+    path = target / "tools.yaml"
+    path.write_text(yaml.dump(DEFAULT_TOOLS, default_flow_style=False, sort_keys=False))
+    return path
 
 ALIASES = '''\
 # Kubernetes
