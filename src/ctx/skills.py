@@ -12,7 +12,7 @@ CLAUDE_MD_CONTENT = """\
 # Projects
 
 Skills in `.claude/skills/` are available for all company work.
-Active company config is at `~/.config/ctx/companies/<name>/config.yaml`.
+Active company config is at `~/Library/ctx/companies/<name>/config.yaml`.
 """
 
 
