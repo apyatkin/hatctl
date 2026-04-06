@@ -446,6 +446,7 @@ from hat.cli_repos import repos
 from hat.cli_secret import secret_group
 from hat.cli_config import config_group
 from hat.cli_tools import tools_group, aliases, completions, skills
+from hat.cli_net import net_group
 
 main.add_command(repos)
 main.add_command(secret_group)
@@ -454,3 +455,4 @@ main.add_command(tools_group)
 main.add_command(aliases)
 main.add_command(completions)
 main.add_command(skills)
+main.add_command(net_group)
