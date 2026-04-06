@@ -275,17 +275,24 @@ def secret_group():
 
 @secret_group.command("set")
 @click.argument("ref")
-def secret_set(ref: str):
-    """Store a secret."""
+@click.option("--file", "-f", "file_path", type=click.Path(exists=True), help="Read value from file")
+def secret_set(ref: str, file_path: str | None):
+    """Store a secret. Use -f for multiline values (SSH keys, certs)."""
     from ctx.secrets import parse_secret_ref
+    import base64
     import subprocess
     backend, path = parse_secret_ref(ref)
-    value = click.prompt("Enter secret value", hide_input=True)
+
+    if file_path:
+        value = open(file_path).read()
+    else:
+        value = click.prompt("Enter secret value", hide_input=True)
 
     if backend == "keychain":
+        encoded = base64.b64encode(value.encode()).decode()
         subprocess.run(
             ["security", "add-generic-password", "-s", path, "-a", path,
-             "-w", value, "-U"],
+             "-w", encoded, "-U"],
             check=True,
         )
         click.echo(f"Stored in keychain: {path}")

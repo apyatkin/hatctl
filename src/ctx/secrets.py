@@ -51,6 +51,7 @@ class SecretResolver:
         return self._resolve_bitwarden(path)
 
     def _resolve_keychain(self, service: str) -> str:
+        import base64
         result = subprocess.run(
             ["security", "find-generic-password", "-s", service, "-w"],
             capture_output=True,
@@ -58,7 +59,11 @@ class SecretResolver:
         )
         if result.returncode != 0:
             raise RuntimeError(f"Failed to read keychain secret '{service}': {result.stderr.strip()}")
-        return result.stdout.strip()
+        raw = result.stdout.strip()
+        try:
+            return base64.b64decode(raw).decode()
+        except Exception:
+            return raw
 
     def _resolve_bitwarden(self, path: str) -> str:
         if self._bw_session is None:
