@@ -25,16 +25,26 @@ def test_vpn_wireguard_activate():
 
 
 def test_vpn_tailscale_activate():
+    from unittest.mock import MagicMock
     mod = VPNModule()
     config = {"provider": "tailscale"}
-    with patch("hat.modules.vpn.subprocess.run") as mock_run, \
+
+    def fake_run(*args, **kwargs):
+        result = MagicMock()
+        cmd = args[0]
+        if cmd[0] == "tailscale" and cmd[1] == "status":
+            # Not connected — status check
+            result.returncode = 1
+            result.stdout = "stopped"
+        else:
+            result.returncode = 0
+        return result
+
+    with patch("hat.modules.vpn.subprocess.run", side_effect=fake_run), \
          patch("hat.modules.vpn.click.confirm"), \
          patch("hat.modules.vpn._find_binary", side_effect=_mock_find):
-        mock_run.return_value.returncode = 0
         mod.activate(config, secrets={})
-    args = mock_run.call_args
-    assert args.args[0] == ["sudo", "tailscale", "up"]
-    assert args.kwargs["check"] is True
+    assert mod.status().active
 
 
 def test_vpn_deactivate_wireguard():

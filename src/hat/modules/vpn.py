@@ -29,6 +29,22 @@ class VPNModule(Module):
         self._config_path: str | None = None
         self._interface: str | None = None
 
+    def _is_already_connected(self) -> bool:
+        env = {**os.environ, "PATH": f"/opt/homebrew/bin:/usr/local/bin:{os.environ.get('PATH', '')}"}
+        if self._provider == "wireguard":
+            result = subprocess.run(
+                ["sudo", _find_binary("wg"), "show"],
+                capture_output=True, text=True, env=env,
+            )
+            return result.returncode == 0 and len(result.stdout.strip()) > 0
+        elif self._provider == "tailscale":
+            result = subprocess.run(
+                [_find_binary("tailscale"), "status"],
+                capture_output=True, text=True,
+            )
+            return result.returncode == 0 and "stopped" not in result.stdout.lower()
+        return False
+
     def activate(self, config: dict, secrets: dict) -> None:
         self._provider = config.get("provider")
         if not self._provider:
@@ -36,6 +52,10 @@ class VPNModule(Module):
 
         self._config_path = config.get("config")
         self._interface = config.get("interface")
+
+        if self._is_already_connected():
+            click.echo(f"    (already connected)")
+            return
 
         if self._provider == "wireguard":
             cmd = ["sudo", _find_binary("wg-quick"), "up", self._config_path]

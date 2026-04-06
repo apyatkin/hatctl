@@ -119,6 +119,20 @@ def vpn_up(company: str, yes: bool):
         click.echo(f"Set one: hat vpn config {company} --provider wireguard --config-file /path/to/wg.conf")
         return
 
+    # Check if already connected
+    import os
+    env = {**os.environ, "PATH": f"/opt/homebrew/bin:/usr/local/bin:{os.environ.get('PATH', '')}"}
+    if provider == "wireguard":
+        result = subprocess.run(["sudo", _find_binary("wg"), "show"], capture_output=True, text=True, env=env)
+        if result.returncode == 0 and result.stdout.strip():
+            click.echo(f"VPN already connected ({provider}).")
+            return
+    elif provider == "tailscale":
+        result = subprocess.run([_find_binary("tailscale"), "status"], capture_output=True, text=True)
+        if result.returncode == 0 and "stopped" not in result.stdout.lower():
+            click.echo(f"VPN already connected ({provider}).")
+            return
+
     config_path = vpn.get("config")
 
     if provider == "wireguard":
