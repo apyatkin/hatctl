@@ -6,12 +6,32 @@ A CLI tool for switching between multiple company environments. Manages VPN, SSH
 
 ```bash
 # Requires Python 3.11+ and uv
+
+# From GitHub
 uv tool install git+https://github.com/apyatkin/personal-tools.git
 
-# Or install from local clone
+# Or from local clone (editable — code changes take effect immediately)
 git clone https://github.com/apyatkin/personal-tools.git
 cd personal-tools
 uv tool install -e .
+```
+
+## Update
+
+```bash
+# After pulling new changes or editing code locally
+uv tool install -e /path/to/personal-tools --force
+
+# Or from GitHub (latest)
+uv tool install git+https://github.com/apyatkin/personal-tools.git --force
+```
+
+With editable install (`-e`), most code changes work immediately. Use `--force` after changing `pyproject.toml` or dependencies.
+
+## Uninstall
+
+```bash
+uv tool uninstall ctx-switch
 ```
 
 ## Shell Integration
