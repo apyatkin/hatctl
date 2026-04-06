@@ -91,12 +91,14 @@ def vpn_config(company: str, provider: str | None, config_path: str | None, inte
 
 @vpn_group.command("up")
 @click.argument("company", shell_complete=_complete_company)
-def vpn_up(company: str):
+@click.option("-y", "--yes", is_flag=True, help="Skip confirmation")
+def vpn_up(company: str, yes: bool):
     """Connect VPN for a company.
 
     \b
-    Example:
+    Examples:
       hat vpn up 3205
+      hat vpn up 3205 -y     skip confirmation
     """
     import subprocess
 
@@ -127,7 +129,8 @@ def vpn_up(company: str):
         click.echo(f"Unknown provider: {provider}")
         return
 
-    click.confirm(f"Will run: {' '.join(cmd)}\nProceed?", default=True, abort=True)
+    if not yes:
+        click.confirm(f"Will run: {' '.join(cmd)}\nProceed?", default=True, abort=True)
     try:
         subprocess.run(cmd, check=True)
     except subprocess.CalledProcessError as e:
