@@ -1,0 +1,37 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## Overview
+
+`ctx` is a Python CLI tool for switching between multiple company environments. It manages VPN connections, SSH keys, cloud credentials (AWS, K8s, Nomad, Vault, etc.), env vars, DNS, git identity, docker registries, browser profiles, and tool installation.
+
+## Development
+
+```bash
+uv venv && uv pip install -e .     # install in dev mode
+uv run ctx --version               # verify CLI works
+uv run pytest tests/ -v            # run all tests
+uv run pytest tests/test_foo.py -v # run single test file
+```
+
+## Architecture
+
+- `src/ctx/cli.py` — Click command definitions, wires everything together
+- `src/ctx/config.py` — YAML config loading from `~/.config/ctx/companies/<name>/config.yaml`
+- `src/ctx/state.py` — State management (`state.json` + `state.env`)
+- `src/ctx/secrets.py` — Secret resolution from macOS Keychain and Bitwarden
+- `src/ctx/shell.py` — Shell integration code generation for zsh
+- `src/ctx/repos.py` — Git repo cloning/pulling via GitLab/GitHub APIs
+- `src/ctx/modules/` — Each module has `activate()`, `deactivate()`, `status()` methods:
+  - Activation order: tools(0) → vpn(2) → dns(3) → hosts(4) → ssh(5) → git(6) → cloud(7) → env(8) → docker(9) → proxy(10) → browser(11) → apps(12)
+  - Deactivation runs in reverse order
+
+## Key Design Decisions
+
+- Hard switch only — one active company at a time
+- All config sections are optional
+- Secrets referenced via `*_ref` fields using `keychain:<name>` or `bitwarden:<path>` syntax
+- Privileged operations (vpn, dns, hosts) prompt before running `sudo`
+- Tool update checks throttled to once per 24 hours
+- GitLab repos preserve nested subgroup structure
