@@ -13,10 +13,19 @@ from hat.modules import Module, ModuleStatus
 
 THROTTLE_SECONDS = 86400
 
-# npm packages often have different binary names than package names
+# Packages where the binary name differs from the package name
+BREW_BIN_MAP = {
+    "wireguard-tools": "wg",
+    "bash": "bash",  # already exists but brew installs newer version
+}
+
 NPM_BIN_MAP = {
     "@bitwarden/cli": "bw",
 }
+
+
+def _brew_bin_name(package: str) -> str:
+    return BREW_BIN_MAP.get(package, package)
 
 
 def _npm_bin_name(package: str) -> str:
@@ -43,7 +52,7 @@ class ToolsModule(Module):
         now = time.time()
 
         brew_outdated: set[str] | None = None
-        tools_to_check = [t for t in brew_tools if shutil.which(t) and self._should_check(t, state, now)]
+        tools_to_check = [t for t in brew_tools if shutil.which(_brew_bin_name(t)) and self._should_check(t, state, now)]
         if tools_to_check:
             result = subprocess.run(["brew", "outdated", "--quiet"], capture_output=True, text=True)
             brew_outdated = set(result.stdout.split())
@@ -70,7 +79,8 @@ class ToolsModule(Module):
             click.echo(f"Tools: {', '.join(parts)}")
 
     def _ensure_brew(self, tool: str, state: dict, now: float, outdated: set[str] | None = None) -> None:
-        if shutil.which(tool) is None:
+        bin_name = _brew_bin_name(tool)
+        if shutil.which(bin_name) is None:
             click.echo(f"  installing {tool} (brew)...")
             subprocess.run(["brew", "install", tool])
             self._installed.append(tool)

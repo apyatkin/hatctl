@@ -35,8 +35,13 @@ def tools_list():
             continue
         click.echo(f"\n  {method}:")
         for tool in sorted(items):
-            from hat.modules.tools import _npm_bin_name
-            bin_name = _npm_bin_name(tool) if method == "npm" else tool
+            from hat.modules.tools import _npm_bin_name, _brew_bin_name
+            if method == "npm":
+                bin_name = _npm_bin_name(tool)
+            elif method == "brew":
+                bin_name = _brew_bin_name(tool)
+            else:
+                bin_name = tool
             installed = shutil.which(bin_name) is not None
             status = click.style("installed", fg="green") if installed else click.style("missing", fg="red")
             click.echo(f"    {tool:30s} [{status}]")
