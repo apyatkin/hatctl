@@ -215,6 +215,59 @@ def secret_delete(ref: str):
     click.echo(f"Removed from registry: {ref}")
 
 
+@secret_group.command("scan")
+def secret_scan():
+    """Find hat secrets already in Keychain and register them.
+
+    Scans company configs for *_ref fields and tries to resolve each one.
+    Any that exist in Keychain are added to the registry.
+    """
+    from hat.config import list_companies, load_company_config
+    from hat.secrets import SecretResolver
+    from hat.secret_registry import register
+
+    resolver = SecretResolver()
+    found = []
+
+    # Scan all company configs for refs
+    for name in list_companies():
+        try:
+            config = load_company_config(name)
+        except Exception:
+            continue
+        refs = resolver._find_refs(config)
+        for ref in refs:
+            try:
+                resolver._resolve_one(ref)
+                register(ref)
+                found.append(ref)
+            except Exception:
+                pass
+
+    # Also try to find any keychain entries matching ssh keys in configs
+    for name in list_companies():
+        try:
+            config = load_company_config(name)
+        except Exception:
+            continue
+        for key in config.get("ssh", {}).get("keys", []):
+            if key.startswith("keychain:"):
+                try:
+                    resolver._resolve_one(key)
+                    register(key)
+                    if key not in found:
+                        found.append(key)
+                except Exception:
+                    pass
+
+    if found:
+        click.echo(f"Registered {len(found)} secret(s):")
+        for ref in sorted(set(found)):
+            click.echo(f"  {ref}")
+    else:
+        click.echo("No accessible secrets found in company configs.")
+
+
 def _print_ref(ref: str, check: bool, resolver) -> None:
     if check:
         try:
