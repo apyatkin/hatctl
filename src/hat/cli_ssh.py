@@ -121,8 +121,12 @@ def ssh_hosts(company: str):
     """List all configured SSH hosts for a company.
 
     \b
-    Example:
+    Examples:
       hat ssh hosts 3205
+
+    \b
+    To connect:
+      hat ssh connect 3205 wireguard
     """
     config = load_company_config(company)
     ssh_config = config.get("ssh", {})
@@ -160,6 +164,8 @@ def ssh_hosts(company: str):
         if entry.get("key_ref"):
             parts.append(f"key={entry['key_ref']}")
         click.echo(f"    {name:20s} {' '.join(parts)}")
+
+    click.echo(f"\n  Connect: hat ssh connect {company} <host>")
 
 
 @ssh_group.command("add")
