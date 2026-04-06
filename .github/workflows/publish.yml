@@ -26,4 +26,4 @@ jobs:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4
       - uses: astral-sh/setup-uv@d4b2f3b6ecc6e67c4457f6d3e41ec42d3d0fcb86 # v4
       - run: uv build
-      - uses: pypa/gh-action-pypi-publish@76f52bc884231f62b54a0f1e3596a4674b4dc038 # release/v1
+      - uses: pypa/gh-action-pypi-publish@v1.13.0
