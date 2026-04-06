@@ -614,30 +614,35 @@ def setup():
     (projects / "common").mkdir(exist_ok=True)
     click.echo(f"  [OK] {projects}/")
 
-    # 2. Touch ID for sudo
-    pam_file = Path("/etc/pam.d/sudo_local")
-    if pam_file.exists() and "pam_tid.so" in pam_file.read_text():
-        click.echo("  [OK] Touch ID for sudo (already enabled)")
-    else:
-        if click.confirm(
-            "\n  Enable Touch ID for sudo? (uses fingerprint instead of password)",
-            default=True,
-        ):
-            result = subprocess.run(
-                [
-                    "sudo",
-                    "sh",
-                    "-c",
-                    'echo "auth       sufficient     pam_tid.so" > /etc/pam.d/sudo_local',
-                ],
-                capture_output=False,
-            )
-            if result.returncode == 0:
-                click.echo("  [OK] Touch ID for sudo enabled")
-            else:
-                click.echo("  [SKIP] Could not enable Touch ID")
+    # 2. Touch ID for sudo (macOS only)
+    from hat.platform import SYSTEM
+
+    if SYSTEM == "Darwin":
+        pam_file = Path("/etc/pam.d/sudo_local")
+        if pam_file.exists() and "pam_tid.so" in pam_file.read_text():
+            click.echo("  [OK] Touch ID for sudo (already enabled)")
         else:
-            click.echo("  [SKIP] Touch ID for sudo")
+            if click.confirm(
+                "\n  Enable Touch ID for sudo? (uses fingerprint instead of password)",
+                default=True,
+            ):
+                result = subprocess.run(
+                    [
+                        "sudo",
+                        "sh",
+                        "-c",
+                        'echo "auth       sufficient     pam_tid.so" > /etc/pam.d/sudo_local',
+                    ],
+                    capture_output=False,
+                )
+                if result.returncode == 0:
+                    click.echo("  [OK] Touch ID for sudo enabled")
+                else:
+                    click.echo("  [SKIP] Could not enable Touch ID")
+            else:
+                click.echo("  [SKIP] Touch ID for sudo")
+    else:
+        click.echo("  [SKIP] Touch ID (macOS only)")
 
     # 3. Generate aliases and completions
     from hat.common import generate_aliases, generate_completions

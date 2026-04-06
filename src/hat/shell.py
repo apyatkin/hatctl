@@ -2,9 +2,15 @@ from __future__ import annotations
 
 
 def generate_shell_init(shell: str) -> str:
-    if shell != "zsh":
+    if shell == "zsh":
+        return _zsh_init()
+    elif shell == "bash":
+        return _bash_init()
+    else:
         raise ValueError(f"Unsupported shell: {shell}")
 
+
+def _zsh_init() -> str:
     return """\
 # hat shell integration
 
@@ -41,4 +47,34 @@ _hat_prompt_info() {
   fi
 }
 RPROMPT='$(_hat_prompt_info) '${RPROMPT}
+"""
+
+
+def _bash_init() -> str:
+    from hat.platform import get_default_config_dir
+
+    config_dir = get_default_config_dir()
+    return f"""\
+# hat shell integration (bash)
+
+[[ -f ~/projects/common/aliases.sh ]] && source ~/projects/common/aliases.sh
+[[ -f ~/projects/common/completions.sh ]] && source ~/projects/common/completions.sh
+
+_hat_prompt() {{
+  local env_file="{config_dir}/state.env"
+  if [[ -f "$env_file" ]]; then
+    source "$env_file"
+  fi
+  local active_file="{config_dir}/active"
+  if [[ -f "$active_file" ]]; then
+    export HAT_ACTIVE=$(cat "$active_file")
+  else
+    unset HAT_ACTIVE
+  fi
+}}
+PROMPT_COMMAND="_hat_prompt;$PROMPT_COMMAND"
+
+if [[ -n "$HAT_ACTIVE" ]]; then
+  PS1="[$HAT_ACTIVE] $PS1"
+fi
 """
