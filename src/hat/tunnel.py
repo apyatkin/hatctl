@@ -46,6 +46,14 @@ def stop_tunnels(pids: list[int]) -> list[dict]:
     results = []
     for pid in pids:
         try:
+            # Verify it's actually an SSH process before killing
+            check = subprocess.run(
+                ["ps", "-p", str(pid), "-o", "comm="],
+                capture_output=True, text=True,
+            )
+            if "ssh" not in check.stdout.lower():
+                results.append({"pid": pid, "status": "skipped", "reason": "not an SSH process"})
+                continue
             os.kill(pid, signal.SIGTERM)
             results.append({"pid": pid, "status": "stopped"})
         except ProcessLookupError:
