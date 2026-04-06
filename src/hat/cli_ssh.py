@@ -115,23 +115,11 @@ def ssh_connect(company: str, host: str, user: str | None, port: int | None, key
     os.execvp("ssh", cmd)
 
 
-@ssh_group.command("hosts")
-@click.argument("company", shell_complete=_complete_company)
-def ssh_hosts(company: str):
-    """List all configured SSH hosts for a company.
-
-    \b
-    Examples:
-      hat ssh hosts 3205
-
-    \b
-    To connect:
-      hat ssh connect 3205 wireguard
-    """
+def _show_hosts_for_company(company: str) -> bool:
+    """Show SSH hosts for a company. Returns True if any hosts found."""
     config = load_company_config(company)
     ssh_config = config.get("ssh", {})
 
-    # Show defaults
     defaults = []
     if ssh_config.get("default_user"):
         defaults.append(f"user: {ssh_config['default_user']}")
@@ -143,17 +131,13 @@ def ssh_hosts(company: str):
             jump = f"{ssh_config['jump_user']}@{jump}"
         defaults.append(f"jump: {jump}")
 
-    if defaults:
-        click.echo(f"\n  Defaults: {', '.join(defaults)}")
-
-    # Show hosts
     hosts = ssh_config.get("hosts", {})
     if not hosts:
-        click.echo("\n  No hosts configured.")
-        click.echo("  Add one: hat ssh add <company> <name> <address>")
-        return
+        return False
 
-    click.echo(f"\n  Hosts:")
+    click.echo(f"\n  {company}:")
+    if defaults:
+        click.echo(f"    defaults: {', '.join(defaults)}")
     for name, entry in sorted(hosts.items()):
         addr = entry.get("address", "?")
         parts = [addr]
@@ -164,8 +148,45 @@ def ssh_hosts(company: str):
         if entry.get("key_ref"):
             parts.append(f"key={entry['key_ref']}")
         click.echo(f"    {name:20s} {' '.join(parts)}")
+    return True
 
-    click.echo(f"\n  Connect: hat ssh connect {company} <host>")
+
+@ssh_group.command("list")
+@click.argument("company", required=False, shell_complete=_complete_company)
+def ssh_list(company: str | None):
+    """List SSH hosts.
+
+    \b
+    Without company, lists hosts for all companies.
+    With company, lists hosts for that company only.
+
+    \b
+    Examples:
+      hat ssh list
+      hat ssh list 3205
+
+    \b
+    To connect:
+      hat ssh connect <company> <host>
+    """
+    from hat.config import list_companies
+
+    companies = [company] if company else list_companies()
+    found = False
+
+    for name in companies:
+        try:
+            if _show_hosts_for_company(name):
+                found = True
+        except Exception:
+            continue
+
+    if not found:
+        click.echo("No SSH hosts configured.")
+        click.echo("Add one: hat ssh add <company> <name> <address>")
+        return
+
+    click.echo(f"\n  Connect: hat ssh connect <company> <host>")
 
 
 @ssh_group.command("add")

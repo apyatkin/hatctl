@@ -50,7 +50,7 @@ def test_ssh_hosts_list(tmp_path, monkeypatch):
     }))
 
     runner = CliRunner()
-    result = runner.invoke(main, ["ssh", "hosts", "acme"])
+    result = runner.invoke(main, ["ssh", "list", "acme"])
     assert result.exit_code == 0
     assert "bastion" in result.output
     assert "10.0.1.10" in result.output
