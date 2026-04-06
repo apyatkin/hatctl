@@ -23,6 +23,31 @@ def load_company_config(name: str) -> dict[str, Any]:
         return yaml.safe_load(f)
 
 
+def save_company_config(name: str, config: dict[str, Any]) -> None:
+    config_file = get_config_dir() / "companies" / name / "config.yaml"
+    config_file.parent.mkdir(parents=True, exist_ok=True)
+    with open(config_file, "w") as f:
+        yaml.dump(config, f, default_flow_style=False, sort_keys=False)
+
+
+def set_nested(config: dict, path: str, value: Any) -> None:
+    """Set a value at a dotted path. Use [+] to append to a list."""
+    parts = path.split(".")
+    obj = config
+    for part in parts[:-1]:
+        if part not in obj:
+            obj[part] = {}
+        obj = obj[part]
+    last = parts[-1]
+    if last.endswith("[+]"):
+        key = last[:-3]
+        if key not in obj:
+            obj[key] = []
+        obj[key].append(value)
+    else:
+        obj[last] = value
+
+
 def list_companies() -> list[str]:
     companies_dir = get_config_dir() / "companies"
     if not companies_dir.exists():
