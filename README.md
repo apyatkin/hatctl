@@ -1,6 +1,6 @@
 # hat — Put On Your Company Hat
 
-> Version 1.0.0
+> Version 1.0.1
 
 A CLI tool for switching between multiple company environments. Manages VPN, SSH keys, cloud credentials, env vars, DNS, git identity, docker registries, browser profiles, tool installation, and git repo cloning.
 
@@ -170,13 +170,16 @@ apps:
 # Set any config value
 hat config set <company> <path> <value>
 
-# Add SSH key
-hat config add-ssh <company> <key-path>
+# Add SSH key (stored in Keychain, never on disk)
+hat config add-ssh <company> <keychain-name> -f ~/.ssh/key
+hat config add-ssh <company> <keychain-name>   # paste key, Ctrl-D
 
 # Store secret in Keychain + add ref to config
 hat config add-secret <company> <config-path> <keychain-name>
 hat config add-secret <company> <config-path> <keychain-name> -f <file>
 ```
+
+SSH keys stored in Keychain are extracted to a temporary file (0600 permissions) during `hat on`, loaded via `ssh-add`, and deleted on `hat off`. Keys never persist on disk.
 
 ## Secrets
 
