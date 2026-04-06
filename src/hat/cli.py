@@ -23,7 +23,7 @@ from hat.state import StateManager
 
 
 def _build_orchestrator() -> Orchestrator:
-    return Orchestrator([
+    builtin = [
         ToolsModule(),
         VPNModule(),
         DNSModule(),
@@ -36,7 +36,15 @@ def _build_orchestrator() -> Orchestrator:
         ProxyModule(),
         BrowserModule(),
         AppsModule(),
-    ])
+    ]
+
+    try:
+        from hat.plugins import load_plugins
+        plugins = load_plugins()
+    except Exception:
+        plugins = []
+
+    return Orchestrator(builtin + plugins)
 
 
 MODULE_NAMES = frozenset({
@@ -49,10 +57,42 @@ def _complete_company(ctx, param, incomplete):
     return [c for c in list_companies() if c.startswith(incomplete)]
 
 
-@click.group()
+@click.group(invoke_without_command=True)
 @click.version_option(package_name="hatctl")
-def main():
+@click.pass_context
+def main(ctx):
     """Company context switcher."""
+    if ctx.invoked_subcommand is None:
+        from hat.tui import run_tui
+        run_tui()
+
+
+@main.command("tui")
+def tui_cmd():
+    """Interactive menu."""
+    from hat.tui import run_tui
+    run_tui()
+
+
+@main.command()
+def watch():
+    """Live dashboard — auto-refreshing status."""
+    from hat.watch import run_watch
+    run_watch()
+
+
+@main.command("plugins")
+def plugins_cmd():
+    """List loaded plugins."""
+    from hat.plugins import load_plugins, PLUGINS_DIR
+    click.echo(f"Plugin directory: {PLUGINS_DIR}")
+    plugins = load_plugins()
+    if not plugins:
+        click.echo("No plugins loaded.")
+        click.echo(f"Add .py files to {PLUGINS_DIR}/")
+        return
+    for p in plugins:
+        click.echo(f"  {p.name} (order={p.order})")
 
 
 @main.command("on")
