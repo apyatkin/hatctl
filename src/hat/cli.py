@@ -106,7 +106,8 @@ def on_cmd(company: str, check_tools: bool):
 
 
 @main.command()
-def off():
+@click.argument("company", required=False)
+def off(company: str | None):
     """Deactivate current context."""
     sm = StateManager()
     if not sm.active_company:
