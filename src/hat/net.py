@@ -8,24 +8,52 @@ from datetime import datetime, timezone
 
 
 def domain_info(domain: str) -> dict:
-    """Get WHOIS/RDAP info for a domain."""
+    """Get WHOIS + RDAP info for a domain."""
+    info = {"domain": domain}
+
+    # WHOIS
     result = subprocess.run(
         ["whois", domain], capture_output=True, text=True
     )
-    info = {"domain": domain, "whois_raw": result.stdout}
+    info["whois_raw"] = result.stdout
 
-    # Parse key fields from whois output
     for line in result.stdout.splitlines():
         line = line.strip()
         lower = line.lower()
         if "registrar:" in lower:
             info["registrar"] = line.split(":", 1)[1].strip()
         elif "creation date:" in lower or "created:" in lower:
-            info["created"] = line.split(":", 1)[1].strip()
+            info.setdefault("created", line.split(":", 1)[1].strip())
         elif "expir" in lower and "date" in lower:
-            info["expires"] = line.split(":", 1)[1].strip()
+            info.setdefault("expires", line.split(":", 1)[1].strip())
         elif "name server:" in lower or "nserver:" in lower:
             info.setdefault("nameservers", []).append(line.split(":", 1)[1].strip())
+
+    # RDAP fallback for missing fields
+    try:
+        import httpx
+        resp = httpx.get(f"https://rdap.org/domain/{domain}", timeout=10, follow_redirects=True)
+        if resp.status_code == 200:
+            rdap = resp.json()
+            for event in rdap.get("events", []):
+                action = event.get("eventAction", "")
+                date = event.get("eventDate", "")
+                if action == "expiration" and "expires" not in info:
+                    info["expires"] = date[:10]
+                elif action == "registration" and "created" not in info:
+                    info["created"] = date[:10]
+                elif action == "last changed":
+                    info["updated"] = date[:10]
+            # Registrar from RDAP
+            if "registrar" not in info:
+                for entity in rdap.get("entities", []):
+                    if "registrar" in entity.get("roles", []):
+                        vcard = entity.get("vcardArray", [None, []])[1]
+                        for field in vcard:
+                            if field[0] == "fn":
+                                info["registrar"] = field[3]
+    except Exception:
+        pass
 
     return info
 

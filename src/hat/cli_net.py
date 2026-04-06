@@ -21,6 +21,8 @@ def domain_cmd(domain: str):
         click.echo(f"Created:     {info['created']}")
     if "expires" in info:
         click.echo(f"Expires:     {info['expires']}")
+    if "updated" in info:
+        click.echo(f"Updated:     {info['updated']}")
     for ns in info.get("nameservers", []):
         click.echo(f"Nameserver:  {ns}")
 
