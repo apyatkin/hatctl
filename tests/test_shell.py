@@ -6,6 +6,7 @@ def test_generate_zsh_init():
     assert "precmd" in output
     assert "state.env" in output
     assert "HAT_ACTIVE" in output
+    assert "active_file" in output
 
 
 def test_generate_unknown_shell():

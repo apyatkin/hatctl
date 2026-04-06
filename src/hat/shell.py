@@ -18,9 +18,9 @@ _hat_precmd() {
   if [[ -f "$env_file" ]]; then
     source "$env_file"
   fi
-  local state_file="${HAT_CONFIG_DIR:-$HOME/Library/hat}/state.json"
-  if [[ -f "$state_file" ]]; then
-    export HAT_ACTIVE=$(python3 -c "import json,sys;d=json.load(open('$state_file'));print(d.get('active_company',''))" 2>/dev/null)
+  local active_file="${HAT_CONFIG_DIR:-$HOME/Library/hat}/active"
+  if [[ -f "$active_file" ]]; then
+    export HAT_ACTIVE=$(cat "$active_file")
   else
     unset HAT_ACTIVE
   fi
