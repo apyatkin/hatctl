@@ -16,6 +16,6 @@ def test_send_disabled(tmp_path, monkeypatch):
     from unittest.mock import patch
 
     monkeypatch.setenv("HAT_CONFIG_DIR", str(tmp_path))
-    with patch("hat.notify.subprocess.Popen") as mock:
+    with patch("hat.platform.subprocess.Popen") as mock:
         send_notification("test", "msg")
     mock.assert_not_called()
