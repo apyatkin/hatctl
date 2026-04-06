@@ -20,7 +20,16 @@ def domain_cmd(domain: str):
     if "created" in info:
         click.echo(f"Created:     {info['created']}")
     if "expires" in info:
-        click.echo(f"Expires:     {info['expires']}")
+        expires = info["expires"]
+        click.echo(f"Expires:     {expires}")
+        try:
+            from datetime import datetime
+            exp_date = datetime.strptime(expires[:10], "%Y-%m-%d")
+            days = (exp_date - datetime.now()).days
+            color = "red" if days < 30 else "yellow" if days < 90 else "green"
+            click.echo(click.style(f"             ({days} days left)", fg=color))
+        except ValueError:
+            pass
     if "updated" in info:
         click.echo(f"Updated:     {info['updated']}")
     for ns in info.get("nameservers", []):
