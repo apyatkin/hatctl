@@ -54,9 +54,18 @@ class Orchestrator:
     def deactivate(self, module_names: list[str]) -> list[str]:
         reverse = [m for m in reversed(self._sorted) if m.name in module_names]
         deactivated = []
+        errors = []
         for mod in reverse:
-            mod.deactivate()
-            deactivated.append(mod.name)
+            try:
+                mod.deactivate()
+                deactivated.append(mod.name)
+            except Exception as e:
+                errors.append(f"{mod.name}: {e}")
+                deactivated.append(mod.name)  # still mark as attempted
+        if errors:
+            import click
+            for err in errors:
+                click.echo(f"  deactivate warning: {err}")
         return deactivated
 
     def status(self) -> dict[str, ModuleStatus]:
