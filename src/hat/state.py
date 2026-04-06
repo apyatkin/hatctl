@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -35,6 +36,13 @@ class StateManager:
         self.activated_modules = []
         self.activated_at = None
 
+    def _atomic_write(self, path: Path, content: str):
+        """Write atomically: write to temp file, set permissions, rename."""
+        tmp_path = path.with_suffix(".tmp")
+        tmp_path.write_text(content)
+        os.chmod(tmp_path, 0o600)
+        os.replace(tmp_path, path)
+
     def save(self):
         self._dir.mkdir(parents=True, exist_ok=True)
         data = {
@@ -42,14 +50,21 @@ class StateManager:
             "activated_modules": self.activated_modules,
             "activated_at": self.activated_at,
         }
-        self._state_file.write_text(json.dumps(data, indent=2) + "\n")
-        os.chmod(self._state_file, 0o600)
+        self._atomic_write(self._state_file, json.dumps(data, indent=2) + "\n")
+        self.write_active_file()
 
     def write_env(self, env_vars: dict[str, str]):
         self._dir.mkdir(parents=True, exist_ok=True)
         lines = [f'export {k}="{v}"' for k, v in sorted(env_vars.items())]
-        self._env_file.write_text("\n".join(lines) + "\n")
-        os.chmod(self._env_file, 0o600)
+        self._atomic_write(self._env_file, "\n".join(lines) + "\n")
+
+    def write_active_file(self):
+        """Write active company name to a flat file for fast shell hook reading."""
+        active_file = self._dir / "active"
+        if self.active_company:
+            self._atomic_write(active_file, self.active_company + "\n")
+        elif active_file.exists():
+            active_file.unlink()
 
     def merge_env(self, env_vars: dict[str, str]):
         existing = self.read_env()
