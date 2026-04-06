@@ -13,6 +13,15 @@ from hat.modules import Module, ModuleStatus
 
 THROTTLE_SECONDS = 86400
 
+# npm packages often have different binary names than package names
+NPM_BIN_MAP = {
+    "@bitwarden/cli": "bw",
+}
+
+
+def _npm_bin_name(package: str) -> str:
+    return NPM_BIN_MAP.get(package, package.split("/")[-1])
+
 
 class ToolsModule(Module):
     name = "tools"
@@ -26,7 +35,8 @@ class ToolsModule(Module):
     def activate(self, config: dict, secrets: dict) -> None:
         brew_tools = config.get("brew", [])
         pipx_tools = config.get("pipx", [])
-        if not brew_tools and not pipx_tools:
+        npm_tools = config.get("npm", [])
+        if not brew_tools and not pipx_tools and not npm_tools:
             return
 
         state = self._load_state()
@@ -43,6 +53,9 @@ class ToolsModule(Module):
 
         for tool in pipx_tools:
             self._ensure_pipx(tool, state, now)
+
+        for tool in npm_tools:
+            self._ensure_npm(tool, state, now)
 
         self._save_state(state)
 
@@ -85,6 +98,33 @@ class ToolsModule(Module):
                 capture_output=True, text=True,
             )
             if "already" not in result.stdout.lower():
+                self._updated.append(tool)
+            else:
+                self._already_ok.append(tool)
+            state[tool] = now
+        else:
+            self._already_ok.append(tool)
+
+    def _ensure_npm(self, tool: str, state: dict, now: float) -> None:
+        # npm packages like @bitwarden/cli install as 'bw'
+        bin_name = _npm_bin_name(tool)
+        if shutil.which(bin_name) is None:
+            subprocess.run(
+                ["npm", "install", "-g", tool],
+                capture_output=True, text=True,
+            )
+            self._installed.append(tool)
+            state[tool] = now
+        elif self._should_check(tool, state, now):
+            result = subprocess.run(
+                ["npm", "outdated", "-g", tool],
+                capture_output=True, text=True,
+            )
+            if result.stdout.strip():
+                subprocess.run(
+                    ["npm", "update", "-g", tool],
+                    capture_output=True, text=True,
+                )
                 self._updated.append(tool)
             else:
                 self._already_ok.append(tool)

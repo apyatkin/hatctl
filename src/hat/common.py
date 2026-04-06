@@ -31,6 +31,9 @@ DEFAULT_TOOLS = {
         "yamllint",
         "ruff",
     ],
+    "npm": [
+        "@bitwarden/cli",
+    ],
 }
 
 
