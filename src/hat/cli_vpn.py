@@ -118,6 +118,13 @@ def vpn_up(company: str, yes: bool):
 
     config_path = vpn.get("config")
 
+    from pathlib import Path
+    if config_path:
+        p = Path(config_path).expanduser()
+        if not p.exists():
+            click.echo(f"VPN config file not found: {p}")
+            return
+
     if provider == "wireguard":
         if not config_path:
             click.echo("WireGuard requires --config-file. Set it: hat vpn config <company> --config-file /path")

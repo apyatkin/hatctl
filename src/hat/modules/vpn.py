@@ -44,6 +44,12 @@ class VPNModule(Module):
             click.echo(f"    (already connected)")
             return
 
+        from pathlib import Path
+        if self._config_path:
+            p = Path(self._config_path).expanduser()
+            if not p.exists():
+                raise FileNotFoundError(f"VPN config not found: {p}")
+
         if self._provider == "wireguard":
             cmd = ["sudo", find_binary("wg-quick"), "up", self._config_path]
         elif self._provider == "amnezia":
