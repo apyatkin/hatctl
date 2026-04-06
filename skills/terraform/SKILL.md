@@ -9,8 +9,8 @@ description: Use when working with Terraform or OpenTofu — plan, apply, state,
 
 To get company-specific Terraform settings:
 
-1. Read `~/.config/ctx/state.json` to get `active_company`
-2. Read `~/.config/ctx/companies/<active_company>/config.yaml`
+1. Read `~/Library/ctx/state.json` to get `active_company`
+2. Read `~/Library/ctx/companies/<active_company>/config.yaml`
 3. Use `cloud.terraform` section — reads `vars` for `TF_VAR_*` env vars
 
 `TF_VAR_*` env vars should already be set by `ctx use`.
