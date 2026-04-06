@@ -166,6 +166,13 @@ def init(company: str):
         return
 
     config_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create project directory
+    from pathlib import Path
+    projects_dir = Path.home() / "projects" / company
+    projects_dir.mkdir(parents=True, exist_ok=True)
+    (projects_dir / "repos").mkdir(exist_ok=True)
+
     template = {
         "name": company,
         "description": "",
@@ -186,7 +193,11 @@ def init(company: str):
     }
     config_file.write_text(yaml.dump(template, default_flow_style=False, sort_keys=False))
     click.echo(f"Created {config_file}")
-    click.echo("Edit the config to add your company settings.")
+    click.echo(f"Created {projects_dir}/")
+    click.echo("Next steps:")
+    click.echo(f"  hat ssh config {company} --default-user <user>")
+    click.echo(f"  hat vpn config {company} --provider wireguard --config-file {projects_dir}/wg0.conf")
+    click.echo(f"  hat config set {company} git.identity.name 'Your Name'")
 
 
 @main.command("shell-init")

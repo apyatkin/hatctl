@@ -50,6 +50,12 @@ def vpn_config(company: str, provider: str | None, config_path: str | None, inte
     if provider:
         vpn["provider"] = provider
         changed = True
+        # Set default config path for wireguard/amnezia if not explicitly provided
+        if provider in ("wireguard", "amnezia") and not config_path and not vpn.get("config"):
+            from pathlib import Path
+            default_path = str(Path.home() / "projects" / company / "wg0.conf")
+            vpn["config"] = default_path
+            click.echo(f"  Default config path: {default_path}")
     if config_path:
         vpn["config"] = config_path
         changed = True
