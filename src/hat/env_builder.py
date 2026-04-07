@@ -15,13 +15,33 @@ def build_company_env(company: str) -> dict[str, str]:
     env_vars: dict[str, str] = {}
 
     # Git identity
-    identity = config.get("git", {}).get("identity", {})
+    git = config.get("git", {})
+    identity = git.get("identity", {})
     if identity.get("name"):
         env_vars["GIT_AUTHOR_NAME"] = identity["name"]
         env_vars["GIT_COMMITTER_NAME"] = identity["name"]
     if identity.get("email"):
         env_vars["GIT_AUTHOR_EMAIL"] = identity["email"]
         env_vars["GIT_COMMITTER_EMAIL"] = identity["email"]
+
+    # Git sources — export URLs and tokens
+    for source in git.get("sources", []):
+        provider = source.get("provider", "")
+        if provider == "gitlab":
+            host = source.get("host", "")
+            if host:
+                env_vars["GITLAB_URL"] = f"https://{host}"
+                env_vars["GITLAB_HOST"] = host
+            token_ref = source.get("token_ref")
+            if token_ref and token_ref in secrets:
+                env_vars["GITLAB_TOKEN"] = secrets[token_ref]
+        elif provider == "github":
+            org = source.get("org", "")
+            if org:
+                env_vars["GITHUB_ORG"] = org
+            token_ref = source.get("token_ref")
+            if token_ref and token_ref in secrets:
+                env_vars["GITHUB_TOKEN"] = secrets[token_ref]
 
     # Cloud providers
     cloud = config.get("cloud", {})
