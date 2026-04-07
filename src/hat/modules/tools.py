@@ -18,9 +18,17 @@ BREW_BIN_MAP = {
     "bash": "bash",  # already exists but brew installs newer version
 }
 
+PIPX_BIN_MAP = {
+    "ansible": "ansible-community",
+}
+
 NPM_BIN_MAP = {
     "@bitwarden/cli": "bw",
 }
+
+
+def _pipx_bin_name(package: str) -> str:
+    return PIPX_BIN_MAP.get(package, package)
 
 
 def _brew_bin_name(package: str) -> str:
@@ -104,7 +112,8 @@ class ToolsModule(Module):
             self._already_ok.append(tool)
 
     def _ensure_pipx(self, tool: str, state: dict, now: float) -> None:
-        if shutil.which(tool) is None:
+        bin_name = _pipx_bin_name(tool)
+        if shutil.which(bin_name) is None:
             click.echo(f"  installing {tool} (pipx)...")
             subprocess.run(["uv", "tool", "install", tool])
             self._installed.append(tool)

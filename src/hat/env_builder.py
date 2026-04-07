@@ -26,7 +26,17 @@ def build_company_env(company: str) -> dict[str, str]:
     # Cloud providers
     cloud = config.get("cloud", {})
     if "aws" in cloud:
-        env_vars["AWS_PROFILE"] = cloud["aws"]["profile"]
+        aws = cloud["aws"]
+        if aws.get("profile"):
+            env_vars["AWS_PROFILE"] = aws["profile"]
+        if aws.get("region"):
+            env_vars["AWS_DEFAULT_REGION"] = aws["region"]
+        access_key_ref = aws.get("access_key_ref")
+        if access_key_ref and access_key_ref in secrets:
+            env_vars["AWS_ACCESS_KEY_ID"] = secrets[access_key_ref]
+        secret_key_ref = aws.get("secret_key_ref")
+        if secret_key_ref and secret_key_ref in secrets:
+            env_vars["AWS_SECRET_ACCESS_KEY"] = secrets[secret_key_ref]
     if "kubernetes" in cloud:
         kubeconfig = cloud["kubernetes"].get("kubeconfig", "")
         if kubeconfig:

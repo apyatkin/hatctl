@@ -35,12 +35,14 @@ def tools_list():
             continue
         click.echo(f"\n  {method}:")
         for tool in sorted(items):
-            from hat.modules.tools import _npm_bin_name, _brew_bin_name
+            from hat.modules.tools import _npm_bin_name, _brew_bin_name, _pipx_bin_name
 
             if method == "npm":
                 bin_name = _npm_bin_name(tool)
             elif method == "brew":
                 bin_name = _brew_bin_name(tool)
+            elif method == "pipx":
+                bin_name = _pipx_bin_name(tool)
             else:
                 bin_name = tool
             installed = shutil.which(bin_name) is not None
