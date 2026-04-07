@@ -61,9 +61,9 @@ class SecretResolver:
                 f"Failed to read secret '{service}' from credential store"
             )
         try:
-            return base64.b64decode(raw).decode()
+            return base64.b64decode(raw).decode().strip()
         except Exception:
-            return raw
+            return raw.strip()
 
     def _resolve_bitwarden(self, path: str) -> str:
         if self._bw_session is None:
