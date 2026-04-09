@@ -29,16 +29,14 @@ def ssh_group():
 
 
 @ssh_group.command("connect")
-@click.argument("company", shell_complete=_complete_company)
-@click.argument("host", shell_complete=_complete_host)
+@click.argument("args", nargs=-1, required=True, metavar="[COMPANY] HOST")
 @click.option("-u", "--user", default=None, help="Override SSH user")
 @click.option("-p", "--port", default=None, type=int, help="Override SSH port")
 @click.option(
     "-k", "--key", "key_override", default=None, help="Override key (keychain name)"
 )
 def ssh_connect(
-    company: str,
-    host: str,
+    args: tuple[str, ...],
     user: str | None,
     port: int | None,
     key_override: str | None,
@@ -46,19 +44,55 @@ def ssh_connect(
     """SSH into a host.
 
     \b
+    Three invocation forms:
+      hat ssh connect bastion               # auto-resolve alias across companies
+      hat ssh connect 3205:bastion          # explicit company:host
+      hat ssh connect 3205 bastion          # explicit company + host (legacy)
+      hat ssh connect 10.0.1.50 -u admin    # raw IP/hostname
+
+    \b
     HOST can be a named host from config or a raw IP/hostname.
     Uses company defaults for user, key, and jump host.
     Use flags to override any setting.
-
-    \b
-    Examples:
-      hat ssh connect 3205 bastion
-      hat ssh connect 3205 webserver -u root
-      hat ssh connect 3205 10.0.1.50 -u admin -p 2222
     """
     import os
     import tempfile
+    from hat.config import list_companies
     from hat.secrets import SecretResolver
+
+    # Parse positional arguments.
+    if len(args) == 2:
+        company, host = args
+    elif len(args) == 1:
+        arg = args[0]
+        if ":" in arg and "/" not in arg:
+            company, host = arg.split(":", 1)
+        else:
+            host = arg
+            # Search across all companies for this host alias.
+            company = None
+            for cname in list_companies():
+                try:
+                    c = load_company_config(cname)
+                except Exception:
+                    continue
+                if host in (c.get("ssh", {}) or {}).get("hosts", {}):
+                    company = cname
+                    break
+            if company is None:
+                # Unknown alias — treat as raw IP/hostname, pick any company
+                # for its defaults (prefer the currently-active one).
+                from hat.state import StateManager
+
+                active = StateManager().active_company
+                company = active or (list_companies()[0] if list_companies() else None)
+                if company is None:
+                    click.echo("Error: no companies configured", err=True)
+                    raise click.Abort()
+    else:
+        raise click.UsageError(
+            "expected 1 or 2 positional args: [COMPANY] HOST or COMPANY:HOST"
+        )
 
     config = load_company_config(company)
     ssh_config = config.get("ssh", {})
