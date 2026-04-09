@@ -81,11 +81,19 @@ def _complete_company(ctx, param, incomplete):
 
 
 class _AliasedGroup(click.Group):
-    """Click group that supports hidden command aliases."""
+    """Click group that supports hidden command aliases.
+
+    `_aliases` maps a removed top-level command name to a dotted path in the
+    real command tree. e.g. 'aliases' -> 'shell.aliases' resolves the legacy
+    'hat aliases ...' invocation to 'hat shell aliases ...' without showing
+    it in --help.
+    """
 
     _aliases: dict[str, str] = {
-        "tools": "package",  # backward-compat: `hat tools ...` -> `hat package ...`
+        "tools": "package",  # `hat tools ...` -> `hat package ...`
         "plugins": "plugin",  # `hat plugins` -> `hat plugin` (bare = list)
+        "aliases": "shell.aliases",  # `hat aliases ...` -> `hat shell aliases ...`
+        "completions": "shell.completions",  # same for completions
     }
 
     def get_command(self, ctx, cmd_name):
@@ -93,9 +101,16 @@ class _AliasedGroup(click.Group):
         if rv is not None:
             return rv
         target = self._aliases.get(cmd_name)
-        if target:
-            return super().get_command(ctx, target)
-        return None
+        if target is None:
+            return None
+        # Walk dotted path to resolve nested aliases.
+        parts = target.split(".")
+        cmd = super().get_command(ctx, parts[0])
+        for part in parts[1:]:
+            if cmd is None or not isinstance(cmd, click.Group):
+                return None
+            cmd = cmd.get_command(ctx, part)
+        return cmd
 
 
 @click.group(cls=_AliasedGroup, invoke_without_command=True)
@@ -115,14 +130,6 @@ def tui_cmd():
     from hat.tui import run_tui
 
     run_tui()
-
-
-@main.command()
-def watch():
-    """Live dashboard — auto-refreshing status."""
-    from hat.watch import run_watch
-
-    run_watch()
 
 
 @main.group("plugin", invoke_without_command=True)
@@ -368,10 +375,45 @@ def init(company: str, from_company: str | None):
     click.echo(f"  hat config set {company} git.identity.name 'Your Name'")
 
 
-@main.command("shell-init")
-@click.argument("shell")
-def shell_init(shell: str):
-    """Output shell integration code."""
+@main.group("shell")
+def shell_group():
+    """Shell integration — spawn, init, aliases, completions.
+
+    \b
+    Examples:
+      hat shell spawn 3205            # open a new shell with 3205 env
+      hat shell init zsh              # emit integration code for .zshrc
+      hat shell aliases generate      # regenerate ~/projects/common/aliases.sh
+      hat shell completions generate  # regenerate completions.sh
+      hat shell completions output    # eval-able completion snippet
+    """
+
+
+@shell_group.command("init")
+@click.argument("shell", type=click.Choice(["zsh", "bash"]))
+def shell_init_subcmd(shell: str):
+    """Output shell integration code (source this in ~/.zshrc / ~/.bashrc)."""
+    click.echo(generate_shell_init(shell))
+
+
+@shell_group.command("spawn")
+@click.argument("company", shell_complete=_complete_company)
+def shell_spawn(company: str):
+    """Spawn a new shell with a company's environment (exits on `exit`)."""
+    from hat.env_builder import build_company_env
+
+    env = {**os.environ, **build_company_env(company)}
+    env["HAT_ACTIVE"] = company
+    shell = os.environ.get("SHELL", "/bin/zsh")
+    click.echo(f"Entering {company} shell. Type 'exit' to leave.")
+    os.execve(shell, [shell], env)
+
+
+# Hidden backward-compat alias for the old top-level 'shell-init' command.
+@main.command("shell-init", hidden=True)
+@click.argument("shell", type=click.Choice(["zsh", "bash"]))
+def shell_init_legacy(shell: str):
+    """DEPRECATED — use `hat shell init <shell>` instead."""
     click.echo(generate_shell_init(shell))
 
 
@@ -412,20 +454,6 @@ def env_cmd(company: str, export_format: bool):
             click.echo(f'export {k}="{v}"')
         else:
             click.echo(f"{k}={v}")
-
-
-@main.command("shell")
-@click.argument("company", shell_complete=_complete_company)
-def shell_cmd(company: str):
-    """Spawn a new shell with a company's environment."""
-    import os
-    from hat.env_builder import build_company_env
-
-    env = {**os.environ, **build_company_env(company)}
-    env["HAT_ACTIVE"] = company
-    shell = os.environ.get("SHELL", "/bin/zsh")
-    click.echo(f"Entering {company} shell. Type 'exit' to leave.")
-    os.execve(shell, [shell], env)
 
 
 @main.command()
@@ -912,14 +940,16 @@ main.add_command(repos)
 main.add_command(secret_group)
 main.add_command(config_group)
 main.add_command(package_group)
-main.add_command(aliases)
-main.add_command(completions)
 main.add_command(skills)
 main.add_command(net_group)
 main.add_command(ssh_group)
 main.add_command(vpn_group)
 main.add_command(inspect_group)
 main.add_command(whatsup_group)
+
+# Shell integration: aliases/completions live under 'hat shell'.
+shell_group.add_command(aliases, name="aliases")
+shell_group.add_command(completions, name="completions")
 
 
 def entrypoint():
