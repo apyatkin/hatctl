@@ -85,6 +85,7 @@ class _AliasedGroup(click.Group):
 
     _aliases: dict[str, str] = {
         "tools": "package",  # backward-compat: `hat tools ...` -> `hat package ...`
+        "plugins": "plugin",  # `hat plugins` -> `hat plugin` (bare = list)
     }
 
     def get_command(self, ctx, cmd_name):
@@ -124,8 +125,16 @@ def watch():
     run_watch()
 
 
-@main.command("plugins")
-def plugins_cmd():
+@main.group("plugin", invoke_without_command=True)
+@click.pass_context
+def plugin_group(ctx):
+    """Manage plugins — list, directory."""
+    if ctx.invoked_subcommand is None:
+        ctx.invoke(plugin_list)
+
+
+@plugin_group.command("list")
+def plugin_list():
     """List loaded plugins."""
     from hat.plugins import load_plugins, PLUGINS_DIR
 
