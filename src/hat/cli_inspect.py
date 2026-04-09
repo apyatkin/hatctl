@@ -773,12 +773,31 @@ def logs_cmd(
             sys.exit(2)
 
     parts = ["journalctl", "--no-pager", "-o", "short-iso", "-n", str(lines)]
-    if service:
-        parts.extend(["-u", shlex.quote(service)])
     if since:
         parts.extend(["--since", shlex.quote(since)])
     if level:
         parts.extend(["-p", level])
+
+    # Service filter — match either unit or syslog identifier.
+    # journalctl ORs raw matches separated by '+'.
+    if service:
+        q = shlex.quote(service)
+        if "." in service:
+            # Full unit name (e.g. 'docker.service', 'nginx.socket') — use as-is
+            parts.extend([f"_SYSTEMD_UNIT={q}"])
+        else:
+            # Bare name — try both '<name>.service' unit and syslog identifier
+            q_svc = shlex.quote(f"{service}.service")
+            parts.extend(
+                [
+                    f"_SYSTEMD_UNIT={q_svc}",
+                    "+",
+                    f"_SYSTEMD_UNIT={q}",
+                    "+",
+                    f"SYSLOG_IDENTIFIER={q}",
+                ]
+            )
+
     journal_cmd = " ".join(parts)
     fallback = f"tail -n {lines} /var/log/syslog 2>/dev/null || tail -n {lines} /var/log/messages 2>/dev/null"
     cmd = f"{journal_cmd} 2>/dev/null || {fallback}"
