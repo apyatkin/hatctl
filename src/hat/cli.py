@@ -825,6 +825,23 @@ def help_cmd(topic: str | None):
     click.echo(text)
 
 
+@main.command("telemetry")
+@click.argument("action", type=click.Choice(["on", "off", "status"]), default="status")
+def telemetry_cmd(action: str):
+    """Manage anonymous crash reporting (on/off/status)."""
+    from hat.telemetry import is_enabled, set_enabled
+
+    if action == "on":
+        set_enabled(True)
+        click.echo("Telemetry enabled.")
+    elif action == "off":
+        set_enabled(False)
+        click.echo("Telemetry disabled.")
+    else:
+        click.echo(f"Telemetry: {'enabled' if is_enabled() else 'disabled'}")
+        click.echo("Override with HAT_TELEMETRY=0 or `hat telemetry off`")
+
+
 from hat.cli_repos import repos
 from hat.cli_secret import secret_group
 from hat.cli_config import config_group
@@ -843,3 +860,31 @@ main.add_command(skills)
 main.add_command(net_group)
 main.add_command(ssh_group)
 main.add_command(vpn_group)
+
+
+def entrypoint():
+    """Console script entrypoint — wraps main() to capture exceptions to Sentry."""
+    from hat.telemetry import init as _telemetry_init, capture_exception, is_first_run, set_enabled
+
+    if is_first_run():
+        click.echo(
+            "Notice: hat sends anonymous crash reports to help fix bugs. "
+            "Run `hat telemetry off` to disable.",
+            err=True,
+        )
+        set_enabled(True)
+
+    _telemetry_init()
+
+    try:
+        main(standalone_mode=False)
+    except click.exceptions.Abort:
+        raise SystemExit(1)
+    except click.exceptions.ClickException as e:
+        e.show()
+        raise SystemExit(e.exit_code)
+    except SystemExit:
+        raise
+    except BaseException as e:
+        capture_exception(e)
+        raise
