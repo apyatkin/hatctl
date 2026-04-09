@@ -9,10 +9,20 @@ from hat.config import get_config_dir
 
 SENTRY_DSN = "https://99e49f6fd68f0a9ddfcfac4b0180287d@o4511188642824192.ingest.de.sentry.io/4511188654882896"
 
-SENSITIVE_ENV_KEYS = frozenset({
-    "password", "secret", "token", "key", "dsn", "credential",
-    "auth", "private", "api_key", "apikey",
-})
+SENSITIVE_ENV_KEYS = frozenset(
+    {
+        "password",
+        "secret",
+        "token",
+        "key",
+        "dsn",
+        "credential",
+        "auth",
+        "private",
+        "api_key",
+        "apikey",
+    }
+)
 
 
 def _settings_file() -> Path:
@@ -25,6 +35,7 @@ def is_enabled() -> bool:
     path = _settings_file()
     if path.exists():
         import json
+
         data = json.loads(path.read_text())
         return data.get("enabled", True)
     return True
@@ -32,6 +43,7 @@ def is_enabled() -> bool:
 
 def set_enabled(enabled: bool) -> None:
     import json
+
     path = _settings_file()
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps({"enabled": enabled}) + "\n")
@@ -59,7 +71,9 @@ def _before_send(event, hint):
             for frame in (exc.get("stacktrace") or {}).get("frames", []):
                 if "vars" in frame:
                     frame["vars"] = {
-                        k: "[scrubbed]" if any(s in k.lower() for s in SENSITIVE_ENV_KEYS) else v
+                        k: "[scrubbed]"
+                        if any(s in k.lower() for s in SENSITIVE_ENV_KEYS)
+                        else v
                         for k, v in frame["vars"].items()
                     }
 
@@ -99,14 +113,20 @@ def init() -> None:
             server_name="redacted",
             shutdown_timeout=5,
         )
-        sentry_sdk.set_context("runtime", {
-            "name": "python",
-            "version": platform.python_version(),
-        })
-        sentry_sdk.set_context("os", {
-            "name": platform.system(),
-            "version": platform.mac_ver()[0] or platform.release(),
-        })
+        sentry_sdk.set_context(
+            "runtime",
+            {
+                "name": "python",
+                "version": platform.python_version(),
+            },
+        )
+        sentry_sdk.set_context(
+            "os",
+            {
+                "name": platform.system(),
+                "version": platform.mac_ver()[0] or platform.release(),
+            },
+        )
         sentry_sdk.set_tag("hat.version", hat_version)
         _initialized = True
     except Exception:
@@ -118,6 +138,7 @@ def capture_exception(exc: BaseException) -> None:
         return
     try:
         import sentry_sdk
+
         sentry_sdk.capture_exception(exc)
         sentry_sdk.flush(timeout=5)
     except Exception:

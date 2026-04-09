@@ -864,7 +864,12 @@ main.add_command(vpn_group)
 
 def entrypoint():
     """Console script entrypoint — wraps main() to capture exceptions to Sentry."""
-    from hat.telemetry import init as _telemetry_init, capture_exception, is_first_run, set_enabled
+    from hat.telemetry import (
+        init as _telemetry_init,
+        capture_exception,
+        is_first_run,
+        set_enabled,
+    )
 
     if is_first_run():
         click.echo(
