@@ -78,6 +78,39 @@ def _render_kv(title: str, pairs: list[tuple[str, Any]], json_mode: bool = False
     Console().print(table)
 
 
+def _humanize_k8s_memory(value: str) -> str:
+    """Convert a Kubernetes resource quantity like '131548412Ki' to '125.5 GB'."""
+    if not value or value == "?":
+        return value
+    v = value.strip()
+    # Binary suffixes (base 1024)
+    binary = {"Ki": 1024, "Mi": 1024**2, "Gi": 1024**3, "Ti": 1024**4, "Pi": 1024**5}
+    # Decimal suffixes (base 1000)
+    decimal = {"K": 1000, "M": 1000**2, "G": 1000**3, "T": 1000**4, "P": 1000**5}
+
+    try:
+        for suffix, mult in binary.items():
+            if v.endswith(suffix):
+                n = float(v[: -len(suffix)]) * mult
+                return _format_bytes(n)
+        for suffix, mult in decimal.items():
+            if v.endswith(suffix):
+                n = float(v[: -len(suffix)]) * mult
+                return _format_bytes(n)
+        n = float(v)
+        return _format_bytes(n)
+    except ValueError:
+        return value
+
+
+def _format_bytes(n: float) -> str:
+    for unit in ("B", "KB", "MB", "GB", "TB", "PB"):
+        if abs(n) < 1024.0:
+            return f"{n:.1f} {unit}"
+        n /= 1024.0
+    return f"{n:.1f} EB"
+
+
 def _status_style(status: str) -> str:
     s = status.lower()
     if s in ("running", "active", "ready", "ok", "healthy", "completed"):
@@ -248,7 +281,7 @@ def k8s_cmd(kubeconfig, k8s_context, namespace, level, json_out):
             # Allocatable
             alloc = n["status"].get("allocatable", {})
             cpu = alloc.get("cpu", "?")
-            mem = alloc.get("memory", "?")
+            mem = _humanize_k8s_memory(alloc.get("memory", "?"))
             node_rows.append([name, ready, role, version, cpu, mem, str(taints)])
     except (ValueError, KeyError):
         pass
