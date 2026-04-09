@@ -151,10 +151,14 @@ def _level_options(f):
 @whatsup_group.command("k8s")
 @click.option(
     "--kubeconfig",
-    type=click.Path(exists=True, dir_okay=False),
     default=None,
-    help="Path to kubeconfig file. Default: $KUBECONFIG env var or ~/.kube/config. "
-    "The current-context inside that file is used.",
+    help="Path to kubeconfig file. Default: $KUBECONFIG env var or ~/.kube/config.",
+)
+@click.option(
+    "--context",
+    "k8s_context",
+    default=None,
+    help="Kubeconfig context name OR path to a kubeconfig file (auto-detected).",
 )
 @click.option(
     "-n",
@@ -163,24 +167,34 @@ def _level_options(f):
     help="Limit to a namespace (default: all namespaces)",
 )
 @_level_options
-def k8s_cmd(kubeconfig, namespace, level, json_out):
+def k8s_cmd(kubeconfig, k8s_context, namespace, level, json_out):
     """Kubernetes cluster overview.
 
     \b
     Examples:
       hat whatsup k8s                                     # uses $KUBECONFIG or ~/.kube/config
       hat whatsup k8s --kubeconfig /path/to/cluster.yaml
+      hat whatsup k8s --context prod                      # context name inside kubeconfig
+      hat whatsup k8s --context /path/to/cluster.yaml     # or a file path — auto-detected
       hat whatsup k8s --errors                            # only problems
       hat whatsup k8s --deep -n kube-system
-
-    \b
-    Context selection: the tool never switches contexts. Use the
-    current-context already set inside the kubeconfig file (override
-    the file via --kubeconfig or $KUBECONFIG).
     """
+    # If --context is actually a file path, treat it as --kubeconfig
+    if k8s_context and os.path.isfile(k8s_context):
+        if kubeconfig and kubeconfig != k8s_context:
+            click.echo(
+                "Error: --kubeconfig and --context both given as file paths",
+                err=True,
+            )
+            sys.exit(2)
+        kubeconfig = k8s_context
+        k8s_context = None
+
     base = ["kubectl"]
     if kubeconfig:
         base.extend(["--kubeconfig", kubeconfig])
+    if k8s_context:
+        base.extend(["--context", k8s_context])
 
     ns_args = ["-n", namespace] if namespace else ["--all-namespaces"]
 
