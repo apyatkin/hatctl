@@ -6,9 +6,59 @@ import subprocess
 from datetime import datetime
 
 
+def _normalize_date(value: str) -> str:
+    """Trim WHOIS dates to YYYY-MM-DD when possible."""
+    v = value.strip().strip(".").strip()
+    # ISO 8601 / RFC3339: 2026-07-31T21:00:00Z or 2026-07-31 21:00:00 or 2026-07-31
+    import re
+
+    m = re.match(r"(\d{4}-\d{2}-\d{2})", v)
+    if m:
+        return m.group(1)
+    # DD-Mon-YYYY
+    m = re.match(r"(\d{1,2})-([A-Za-z]{3})-(\d{4})", v)
+    if m:
+        try:
+            dt = datetime.strptime(m.group(0), "%d-%b-%Y")
+            return dt.strftime("%Y-%m-%d")
+        except ValueError:
+            pass
+    return v
+
+
 def domain_info(domain: str) -> dict:
     """Get WHOIS + RDAP info for a domain."""
     info = {"domain": domain}
+
+    # Field-name aliases seen across TLDs (lowercase, no trailing colon).
+    # The first match wins per field.
+    _CREATED_KEYS = (
+        "creation date",
+        "created",
+        "created on",
+        "registered",
+        "registration time",
+        "domain registered",
+    )
+    _EXPIRY_KEYS = (
+        "registry expiry date",
+        "registrar registration expiration date",
+        "expiry date",
+        "expiration date",
+        "expires",
+        "expires on",
+        "paid-till",  # .ru, .su, .рф
+        "expire",
+        "renewal date",
+    )
+    _REGISTRAR_KEYS = ("registrar",)
+    _NS_KEYS = ("name server", "nserver", "nameserver", "name-servers")
+
+    def _match_any(lower_line: str, keys: tuple[str, ...]) -> str | None:
+        for k in keys:
+            if lower_line.startswith(k + ":") or lower_line.startswith(k + " :"):
+                return lower_line.split(":", 1)[0]
+        return None
 
     # WHOIS
     result = subprocess.run(["whois", domain], capture_output=True, text=True)
@@ -16,14 +66,16 @@ def domain_info(domain: str) -> dict:
 
     for line in result.stdout.splitlines():
         line = line.strip()
+        if not line or line.startswith(("%", "#", ">>>", "--")):
+            continue
         lower = line.lower()
-        if "registrar:" in lower:
-            info["registrar"] = line.split(":", 1)[1].strip()
-        elif "creation date:" in lower or "created:" in lower:
-            info.setdefault("created", line.split(":", 1)[1].strip())
-        elif "expir" in lower and "date" in lower:
-            info.setdefault("expires", line.split(":", 1)[1].strip())
-        elif "name server:" in lower or "nserver:" in lower:
+        if _match_any(lower, _REGISTRAR_KEYS):
+            info.setdefault("registrar", line.split(":", 1)[1].strip())
+        elif _match_any(lower, _CREATED_KEYS):
+            info.setdefault("created", _normalize_date(line.split(":", 1)[1].strip()))
+        elif _match_any(lower, _EXPIRY_KEYS):
+            info.setdefault("expires", _normalize_date(line.split(":", 1)[1].strip()))
+        elif _match_any(lower, _NS_KEYS):
             info.setdefault("nameservers", []).append(line.split(":", 1)[1].strip())
 
     # RDAP fallback for missing fields
