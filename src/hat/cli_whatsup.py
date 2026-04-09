@@ -108,7 +108,7 @@ def whatsup_group():
     \b
     Examples:
       hat whatsup k8s
-      hat whatsup k8s --context prod
+      hat whatsup k8s --kubeconfig /path/to/cluster.yaml
       hat whatsup k8s --errors
       hat whatsup k8s --deep
       hat whatsup nomad
@@ -153,9 +153,9 @@ def _level_options(f):
     "--kubeconfig",
     type=click.Path(exists=True, dir_okay=False),
     default=None,
-    help="Path to kubeconfig file (defaults to $KUBECONFIG or ~/.kube/config)",
+    help="Path to kubeconfig file. Default: $KUBECONFIG env var or ~/.kube/config. "
+    "The current-context inside that file is used.",
 )
-@click.option("--context", "k8s_context", default=None, help="Kubeconfig context name")
 @click.option(
     "-n",
     "--namespace",
@@ -163,22 +163,24 @@ def _level_options(f):
     help="Limit to a namespace (default: all namespaces)",
 )
 @_level_options
-def k8s_cmd(kubeconfig, k8s_context, namespace, level, json_out):
+def k8s_cmd(kubeconfig, namespace, level, json_out):
     """Kubernetes cluster overview.
 
     \b
     Examples:
-      hat whatsup k8s                      # current context overview
-      hat whatsup k8s --context prod
-      hat whatsup k8s --kubeconfig ~/.kube/stage.yaml
-      hat whatsup k8s --errors             # only problems
+      hat whatsup k8s                                     # uses $KUBECONFIG or ~/.kube/config
+      hat whatsup k8s --kubeconfig /path/to/cluster.yaml
+      hat whatsup k8s --errors                            # only problems
       hat whatsup k8s --deep -n kube-system
+
+    \b
+    Context selection: the tool never switches contexts. Use the
+    current-context already set inside the kubeconfig file (override
+    the file via --kubeconfig or $KUBECONFIG).
     """
     base = ["kubectl"]
     if kubeconfig:
         base.extend(["--kubeconfig", kubeconfig])
-    if k8s_context:
-        base.extend(["--context", k8s_context])
 
     ns_args = ["-n", namespace] if namespace else ["--all-namespaces"]
 
