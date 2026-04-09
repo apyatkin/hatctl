@@ -463,16 +463,6 @@ def doctor(company: str | None, fix: bool):
 
 
 @main.command()
-def migrate():
-    """Migrate config from ~/.config/ctx/ to ~/Library/hat/."""
-    from hat.migrate import migrate_from_ctx
-
-    actions = migrate_from_ctx()
-    for action in actions:
-        click.echo(action)
-
-
-@main.command()
 @click.option(
     "-o",
     "--output",
