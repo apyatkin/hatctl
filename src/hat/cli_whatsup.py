@@ -13,12 +13,16 @@ from __future__ import annotations
 
 import json as _json
 import os
-import shlex
 import subprocess
 import sys
-from typing import Any
 
 import click
+
+from hat.output import (
+    humanize_k8s_memory as _humanize_k8s_memory,
+    render_kv as _render_kv,
+    render_table as _render_table,
+)
 
 
 # ─── Common helpers ────────────────────────────────────────────────────────
@@ -59,100 +63,6 @@ def _run_local(
         return 127, "", f"{cmd[0]}: not found"
     except subprocess.TimeoutExpired:
         return 124, "", f"{cmd[0]}: timeout"
-
-
-def _render_table(
-    title: str, columns: list[str], rows: list[list[Any]], json_mode: bool = False
-):
-    if json_mode:
-        out = {
-            "title": title,
-            "columns": columns,
-            "rows": [{col: row[i] for i, col in enumerate(columns)} for row in rows],
-        }
-        click.echo(_json.dumps(out, indent=2, default=str))
-        return
-
-    from rich.console import Console
-    from rich.table import Table
-
-    table = Table(title=title, header_style="bold cyan", title_style="bold")
-    for col in columns:
-        table.add_column(col, overflow="fold")
-    for row in rows:
-        table.add_row(*[str(c) for c in row])
-    Console().print(table)
-
-
-def _render_kv(title: str, pairs: list[tuple[str, Any]], json_mode: bool = False):
-    if json_mode:
-        click.echo(
-            _json.dumps({"title": title, "data": dict(pairs)}, indent=2, default=str)
-        )
-        return
-
-    from rich.console import Console
-    from rich.table import Table
-
-    table = Table(title=title, header_style="bold cyan", title_style="bold")
-    table.add_column("Metric", style="dim")
-    table.add_column("Value")
-    for k, v in pairs:
-        table.add_row(str(k), str(v))
-    Console().print(table)
-
-
-def _humanize_k8s_memory(value: str) -> str:
-    """Convert a Kubernetes resource quantity like '131548412Ki' to '125.5 GB'."""
-    if not value or value == "?":
-        return value
-    v = value.strip()
-    # Binary suffixes (base 1024)
-    binary = {"Ki": 1024, "Mi": 1024**2, "Gi": 1024**3, "Ti": 1024**4, "Pi": 1024**5}
-    # Decimal suffixes (base 1000)
-    decimal = {"K": 1000, "M": 1000**2, "G": 1000**3, "T": 1000**4, "P": 1000**5}
-
-    try:
-        for suffix, mult in binary.items():
-            if v.endswith(suffix):
-                n = float(v[: -len(suffix)]) * mult
-                return _format_bytes(n)
-        for suffix, mult in decimal.items():
-            if v.endswith(suffix):
-                n = float(v[: -len(suffix)]) * mult
-                return _format_bytes(n)
-        n = float(v)
-        return _format_bytes(n)
-    except ValueError:
-        return value
-
-
-def _format_bytes(n: float) -> str:
-    for unit in ("B", "KB", "MB", "GB", "TB", "PB"):
-        if abs(n) < 1024.0:
-            return f"{n:.1f} {unit}"
-        n /= 1024.0
-    return f"{n:.1f} EB"
-
-
-def _status_style(status: str) -> str:
-    s = status.lower()
-    if s in ("running", "active", "ready", "ok", "healthy", "completed"):
-        return "green"
-    if s in (
-        "pending",
-        "creating",
-        "containercreating",
-        "init",
-        "terminating",
-        "draining",
-    ):
-        return "yellow"
-    return "red"
-
-
-def _colorize(value: str) -> str:
-    return f"[{_status_style(value)}]{value}[/{_status_style(value)}]"
 
 
 # ─── whatsup group ─────────────────────────────────────────────────────────
@@ -1085,7 +995,3 @@ def nomad_cmd(address, token, region, level, json_out):
                 ["ID", "Job", "Status", "Description"],
                 deploy_rows,
             )
-
-
-# Silence unused-import warnings from the helper shims above
-_ = (_colorize, _status_style, shlex)

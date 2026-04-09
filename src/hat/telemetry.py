@@ -33,12 +33,17 @@ def is_enabled() -> bool:
     if os.environ.get("HAT_TELEMETRY", "").lower() in ("0", "false", "off", "no"):
         return False
     path = _settings_file()
-    if path.exists():
+    if not path.exists():
+        return True
+    try:
         import json
 
         data = json.loads(path.read_text())
-        return data.get("enabled", True)
-    return True
+    except (OSError, ValueError):
+        # Corrupt or unreadable settings file — default to enabled
+        # rather than crashing every hat invocation.
+        return True
+    return bool(data.get("enabled", True))
 
 
 def set_enabled(enabled: bool) -> None:
@@ -53,35 +58,86 @@ def is_first_run() -> bool:
     return not _settings_file().exists()
 
 
+_SECRETY_VALUE_HINTS = (
+    "://",  # URLs (may contain hostnames / creds)
+    "bearer ",
+    "token=",
+    "password=",
+    "secret=",
+)
+
+
+def _scrub_value(value):
+    """Scrub a leaf value if it looks like a secret.
+
+    We're conservative: strings that look like URLs, JWTs, long hex/base64,
+    or contain secret-ish keywords are replaced. Non-string values are
+    returned as-is.
+    """
+    if not isinstance(value, str):
+        return value
+    v = value.lower()
+    if any(hint in v for hint in _SECRETY_VALUE_HINTS):
+        return "[scrubbed]"
+    # Long opaque strings (likely tokens/keys): >= 32 chars, no whitespace
+    if len(value) >= 32 and " " not in value and "\n" not in value:
+        return "[scrubbed]"
+    return value
+
+
+def _scrub_mapping(mapping: dict) -> dict:
+    """Scrub a dict by key name AND by value content."""
+    out = {}
+    for k, v in mapping.items():
+        if any(s in k.lower() for s in SENSITIVE_ENV_KEYS):
+            out[k] = "[scrubbed]"
+        elif isinstance(v, dict):
+            out[k] = _scrub_mapping(v)
+        else:
+            out[k] = _scrub_value(v)
+    return out
+
+
 def _before_send(event, hint):
     """Scrub PII and sensitive data before sending to Sentry."""
-    # Remove server_name (hostname)
+    # Hostname / user / machine info
     event.pop("server_name", None)
-
-    # Scrub user info
     event.pop("user", None)
 
-    # Scrub breadcrumbs that may contain commands/args with secrets
-    if "breadcrumbs" in event:
-        event["breadcrumbs"] = {"values": []}
+    # Request context (URLs, headers, cookies, data)
+    event.pop("request", None)
 
-    # Scrub exception frames for local variables
-    if "exception" in event:
-        for exc in event["exception"].get("values", []):
-            for frame in (exc.get("stacktrace") or {}).get("frames", []):
-                if "vars" in frame:
-                    frame["vars"] = {
-                        k: "[scrubbed]"
-                        if any(s in k.lower() for s in SENSITIVE_ENV_KEYS)
-                        else v
-                        for k, v in frame["vars"].items()
-                    }
+    # Breadcrumbs may contain command lines with tokens — drop entirely.
+    event.pop("breadcrumbs", None)
 
-    # Scrub extra context
-    if "extra" in event:
-        event["extra"] = {
-            k: "[scrubbed]" if any(s in k.lower() for s in SENSITIVE_ENV_KEYS) else v
-            for k, v in event["extra"].items()
+    # Modules list can fingerprint env — not secrets but not needed.
+    event.pop("modules", None)
+
+    # Scrub exception chain (type + value + stacktrace vars and context)
+    for exc in (event.get("exception") or {}).get("values", []) or []:
+        # The exception message itself can contain secrets (e.g. a 403
+        # from a URL with a token in it) — redact it lightly.
+        if isinstance(exc.get("value"), str):
+            exc["value"] = _scrub_value(exc["value"])
+        for frame in (exc.get("stacktrace") or {}).get("frames", []) or []:
+            if isinstance(frame.get("vars"), dict):
+                frame["vars"] = _scrub_mapping(frame["vars"])
+            # Source-code context lines can contain string literals with
+            # secrets — drop them. Stack-trace filenames/functions are OK.
+            frame.pop("pre_context", None)
+            frame.pop("context_line", None)
+            frame.pop("post_context", None)
+
+    # Tags + extra contexts
+    for key in ("extra", "tags"):
+        if isinstance(event.get(key), dict):
+            event[key] = _scrub_mapping(event[key])
+
+    # Contexts may hold runtime/trace info — keep the runtime/os contexts
+    # we set explicitly in init(), drop everything else.
+    if isinstance(event.get("contexts"), dict):
+        event["contexts"] = {
+            k: v for k, v in event["contexts"].items() if k in ("runtime", "os")
         }
 
     return event

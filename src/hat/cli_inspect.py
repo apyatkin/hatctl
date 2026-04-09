@@ -7,11 +7,18 @@ import shlex
 import subprocess
 import sys
 from dataclasses import dataclass
-from typing import Any
 
 import click
 
 from hat.config import load_company_config
+from hat.output import (
+    human_bytes as _human_bytes,
+    human_kib as _human_kib,
+    parse_meminfo as _parse_meminfo,
+    parse_sections as _parse_sections,
+    render_kv as _render_kv,
+    render_table as _render_table,
+)
 
 
 # ─── SSH target resolution ─────────────────────────────────────────────────
@@ -172,53 +179,6 @@ def _run_remote(target: SSHTarget, remote_cmd: str) -> str:
             click.echo(result.stderr.strip(), err=True)
         sys.exit(result.returncode)
     return result.stdout
-
-
-# ─── Output rendering ──────────────────────────────────────────────────────
-
-
-def _render_table(
-    title: str,
-    columns: list[str],
-    rows: list[list[Any]],
-    json_mode: bool = False,
-):
-    if json_mode:
-        out = {
-            "title": title,
-            "columns": columns,
-            "rows": [{col: row[i] for i, col in enumerate(columns)} for row in rows],
-        }
-        click.echo(_json.dumps(out, indent=2, default=str))
-        return
-
-    from rich.console import Console
-    from rich.table import Table
-
-    table = Table(title=title, header_style="bold cyan", title_style="bold")
-    for col in columns:
-        table.add_column(col, overflow="fold")
-    for row in rows:
-        table.add_row(*[str(c) for c in row])
-    Console().print(table)
-
-
-def _render_kv(title: str, pairs: list[tuple[str, Any]], json_mode: bool = False):
-    if json_mode:
-        click.echo(
-            _json.dumps({"title": title, "data": dict(pairs)}, indent=2, default=str)
-        )
-        return
-
-    from rich.console import Console
-    from rich.table import Table
-
-    table = Table(title=title, header_style="bold cyan", title_style="bold")
-    table.add_column("Metric", style="dim")
-    table.add_column("Value")
-    for k, v in pairs:
-        table.add_row(str(k), str(v))
-    Console().print(table)
 
 
 # ─── Common option set ─────────────────────────────────────────────────────
@@ -1477,7 +1437,9 @@ def proc_cmd(remote, user, port, private_key, json_out, target_proc):
     """
     target = _resolve_target(remote, user, port, private_key)
 
-    # Resolve name → pid server-side
+    # Resolve name → pid server-side.
+    # All $PID expansions are double-quoted to prevent empty-resolution
+    # from matching /proc itself (pgrep-returns-empty edge case).
     script = f"""
 PID={shlex.quote(target_proc)}
 if ! echo "$PID" | grep -qE '^[0-9]+$'; then
@@ -1487,7 +1449,7 @@ if ! echo "$PID" | grep -qE '^[0-9]+$'; then
   fi
   PID="$RESOLVED"
 fi
-if [ -z "$PID" ] || ! [ -d /proc/$PID ]; then
+if [ -z "$PID" ] || ! [ -d /proc/"$PID" ]; then
   echo '===NOTFOUND==='
   echo "No process matching: {shlex.quote(target_proc)}"
   exit 0
@@ -1497,11 +1459,11 @@ echo "$PID"
 echo '===PS==='
 ps -p "$PID" -o pid,ppid,user,pcpu,pmem,rss,vsz,nlwp,stat,lstart,comm --no-headers 2>/dev/null
 echo '===CMDLINE==='
-tr '\\0' ' ' < /proc/$PID/cmdline 2>/dev/null; echo
+tr '\\0' ' ' < /proc/"$PID"/cmdline 2>/dev/null; echo
 echo '===STATUS==='
-grep -E '^(VmPeak|VmSize|VmRSS|Threads|voluntary_ctxt_switches|nonvoluntary_ctxt_switches|State):' /proc/$PID/status 2>/dev/null
+grep -E '^(VmPeak|VmSize|VmRSS|Threads|voluntary_ctxt_switches|nonvoluntary_ctxt_switches|State):' /proc/"$PID"/status 2>/dev/null
 echo '===FDS==='
-ls /proc/$PID/fd 2>/dev/null | wc -l
+ls /proc/"$PID"/fd 2>/dev/null | wc -l
 echo '===CONNS==='
 ss -tanp state established 2>/dev/null | grep "pid=$PID," || true
 """
@@ -1964,57 +1926,4 @@ def _parse_journal_line(line: str) -> list[str]:
     return ["", "", "", line]
 
 
-# ─── helpers ───────────────────────────────────────────────────────────────
-
-
-def _parse_sections(text: str) -> dict[str, str]:
-    sections: dict[str, str] = {}
-    current = None
-    buf: list[str] = []
-    for line in text.splitlines():
-        if line.startswith("===") and line.endswith("==="):
-            if current is not None:
-                sections[current] = "\n".join(buf)
-            current = line.strip("=")
-            buf = []
-        else:
-            buf.append(line)
-    if current is not None:
-        sections[current] = "\n".join(buf)
-    return sections
-
-
-def _parse_meminfo(text: str) -> dict[str, str]:
-    """Parse /proc/meminfo, return human-readable values."""
-    raw: dict[str, int] = {}
-    for line in text.splitlines():
-        if ":" not in line:
-            continue
-        k, v = line.split(":", 1)
-        v = v.strip().split()
-        if v and v[0].isdigit():
-            raw[k.strip()] = int(v[0])  # in kB
-
-    out = {k: _human_kib(str(v)) for k, v in raw.items()}
-    if "MemTotal" in raw and "MemAvailable" in raw:
-        out["MemUsed"] = _human_kib(str(raw["MemTotal"] - raw["MemAvailable"]))
-    if "SwapTotal" in raw and "SwapFree" in raw:
-        out["SwapUsed"] = _human_kib(str(raw["SwapTotal"] - raw["SwapFree"]))
-    return out
-
-
-def _human_kib(value: str) -> str:
-    """Convert a string of KiB to a human-readable size."""
-    try:
-        kb = float(value)
-    except (ValueError, TypeError):
-        return value
-    return _human_bytes(kb * 1024)
-
-
-def _human_bytes(n: float) -> str:
-    for unit in ("B", "KB", "MB", "GB", "TB", "PB"):
-        if abs(n) < 1024.0:
-            return f"{n:.1f} {unit}"
-        n /= 1024.0
-    return f"{n:.1f} EB"
+# All rendering + humanize helpers live in hat.output (imported above).
